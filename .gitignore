@@ -1,0 +1,4 @@
+*.log
+**/Debug
+**/Release
+**/x64
