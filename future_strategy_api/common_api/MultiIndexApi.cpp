@@ -138,14 +138,14 @@ void SpiderMultiIndexSpi::handle_receive_from(const boost::system::error_code& e
 	//LOGD(bytes_recvd<<', '<< sizeof(MarketDataIndex));
 	if (bytes_recvd == sizeof(MarketDataIndex))
 	{
-		if (++recv_count % 100 == 0)
+		if (++recv_count % 1000 == 0)
 		{
 			LOGD("SpiderMultiIndexSpi received: "<<recv_count);
 		}
 		MarketDataIndex _index;
 		memcpy(&_index, m_data,bytes_recvd);
 		QuotaData * md = new QuotaData();
-		md->ExchangeID = get_exid_from_ctp(_index.ExID);
+		md->ExchangeID = get_exid_from_index_mul(_index.ExID);
 		md->UpdateMillisec = 0;
 		memcpy(md->TradingDay, getTodayString(), sizeof(md->TradingDay) - 1);
 		memcpy(md->Code, _index.SecID, sizeof(md->Code) - 1);
@@ -168,9 +168,16 @@ void SpiderMultiIndexSpi::handle_receive_from(const boost::system::error_code& e
 		md->OpenInterest = 0;
 		md->Turnover = (double)_index.Turnover;
 		md->Volume = _index.Volume;
-
+	
 		if (smd)
-			smd->on_receive_data(md);
+		{
+			bool _need_send = (_index.Type == 400) || smd->ifTest();
+			if (_need_send)
+			{
+				smd->on_receive_data(md);
+			}		
+		}
+			
 	}
 
 	async_receive();

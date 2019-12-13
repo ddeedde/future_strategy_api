@@ -97,11 +97,11 @@ namespace Spider {
 				gcroot<BaseQuotaApi^>* mdClr = (gcroot<BaseQuotaApi^>*)task.dest;
 				((BaseQuotaApi^)* mdClr)->RaiseOnDataArriveEvent(task.data);
 			}
-			//if (task.data != NULL) //在这里释放行情指针，C++ api中不再释放 
-			//{
-			//	delete task.data;
-			//	task.data = NULL;
-			//}
+			if (task.data != NULL) //在这里释放行情指针，C++ api中不再释放 
+			{
+				delete task.data;
+				task.data = NULL;
+			}
 		}
 	}
 //=======工具类结束=========================================================
@@ -258,6 +258,7 @@ namespace Spider {
 		{
 			this->nestSpider->release();
 		}	
+
 		if (mdClr)
 		{
 			//gcroot<BaseQuotaApi^> *pp = static_cast<gcroot<BaseQuotaApi^>*>(this->common);

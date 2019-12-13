@@ -9,6 +9,7 @@
 #include "SpiderApiStruct.h"
 #include "EesTraderApi.h"
 #include <map>
+#include <deque>
 
 
 struct ees_order
@@ -50,6 +51,13 @@ class SpiderEesTdSpi : public EESTraderEvent
 	AccountInfo myAccount;
 
 	EES_TradeSvrInfo myServer;
+
+	bool isReady;
+
+	std::shared_ptr<std::thread> independent_thread; //用于定时器，或者异步做些别的事情
+
+	std::deque<async_task> task_queue;
+	std::mutex task_mutex;
 public:
 	EESTraderApi * getUserApi() { return userApi; }
 	bool init(SpiderEesTdSession * sm);
@@ -57,6 +65,10 @@ public:
 	void stop();
 	void login();
 	//void authenticate(); //看穿式认证
+	bool ready() { return isReady; }
+
+	void add_task(async_task _t);
+	void process_task();
 
 public:
 	SpiderEesTdSpi();

@@ -23,12 +23,15 @@ class ConfigReader
 
 public:
 
+	bool is_test;
+
 	std::map<std::string, AccountInfo > future_trade_account_list;
 	std::map<std::string, AccountInfo> future_market_account_list;
 	std::map<std::string, AccountInfo> index_market_account_list;
 
 	/*********************************************************************************/
 	ConfigReader()
+		:is_test(false)
 	{
 
 	}
@@ -56,7 +59,10 @@ public:
 		cJSON *accountArray3 = NULL;
 		for (cJSON *exp = poi->child; exp!=NULL; exp=exp->next)
 		{
-			if (strcmp(exp->string, "future_trade_accounts") == 0 && exp->type == cJSON_Array) {
+			if (strcmp(exp->string, "is_test") == 0 && (exp->type == cJSON_False || exp->type == cJSON_True)) {
+				is_test = exp->type == cJSON_True;
+			}
+			else if (strcmp(exp->string, "future_trade_accounts") == 0 && exp->type == cJSON_Array) {
 				accountArray1 = exp;
 			} 
 			else if (strcmp(exp->string, "future_market_accounts") == 0 && exp->type == cJSON_Array) {

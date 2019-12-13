@@ -35,6 +35,7 @@ bool SpiderEesMdSpi::init(SpiderEesMdSession * sm)
 			{
 				replace_all(ips[1], "/", "");
 				EqsTcpInfo tmp;
+				memset(&tmp,0,sizeof(tmp));
 				strncpy(tmp.m_eqsIp, ips[1].c_str(), sizeof(tmp.m_eqsIp) - 1);
 				tmp.m_eqsPort = (unsigned short)atoi(ips[2].c_str());
 				tcp_list.push_back(tmp);
@@ -206,9 +207,9 @@ void SpiderEesMdSpi::OnQuoteUpdated(EesEqsIntrumentType chInstrumentType, EESMar
 {
 	if (pDepthQuoteData != NULL)
 	{
-		if (++recv_count % 100 == 0)
+		if (++recv_count % 1000 == 0)
 		{
-			LOGD("SpiderEESMdSpi received: " << recv_count);
+			LOGD("SpiderEESMdSpi received: " << recv_count<<", ex:"<< pDepthQuoteData->ExchangeID);
 		}
 		QuotaData * md = new QuotaData();
 		md->ExchangeID = get_exid_from_ctp(pDepthQuoteData->ExchangeID);

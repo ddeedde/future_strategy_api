@@ -6,6 +6,7 @@
 SpiderEesTdSpi::SpiderEesTdSpi()
 	: userApi(NULL)
 	, smd(NULL)
+	, isReady(false)
 {
 
 }
@@ -73,11 +74,66 @@ bool SpiderEesTdSpi::init(SpiderEesTdSession * sm)
 		return false;
 	}
 	userApi->SetLoggerSwitch(true); //开启本地日志
+
+	independent_thread.reset(new std::thread(std::bind(&SpiderEesTdSpi::process_task,this)));
+
 	return true;
+}
+
+void SpiderEesTdSpi::add_task(async_task _t)
+{
+	std::unique_lock<std::mutex> l(task_mutex);
+	task_queue.push_back(_t);
+}
+void SpiderEesTdSpi::process_task()
+{
+	while (userApi)
+	{
+		std::this_thread::sleep_for(std:: chrono::seconds(1));	
+		async_task _task;
+		{
+			std::unique_lock<std::mutex> l(task_mutex);
+			if (task_queue.empty())
+			{
+				continue;
+			}
+			_task = task_queue.front();
+			task_queue.pop_front();
+		}
+		switch (_task.task_id)
+		{
+		case async_task_login:
+		{
+			LOGI(myAccount.account_id << ", EES:开始重新连接");
+			start();
+			break;
+		}
+		case async_task_send_order_fail:
+		{
+			LOGI(myAccount.account_id << ", EES:发送直接委托失败");
+			if (smd && _task.task_data)
+			{
+				smd->on_order_insert((OrderInfo*)_task.task_data);
+			};
+			if (_task.task_data)
+			{
+				delete _task.task_data;
+				_task.task_data = NULL;
+			}
+			break;
+		}
+		default:
+			break;
+		}
+	}
 }
 
 void SpiderEesTdSpi::start()
 {
+	if (isReady) //已经登录成功了
+	{
+		return;
+	}
 	int ret = 0;
 	if (myServer.m_remoteTradeUDPPort != 0) //极致版
 	{
@@ -94,12 +150,17 @@ void SpiderEesTdSpi::start()
 
 void SpiderEesTdSpi::stop()
 {
+	isReady = false;
 	if (userApi)
 	{
 		userApi->LoggerFlush();
 		userApi->DisConnServer();
 		DestroyEESTraderApi(userApi);
 		userApi = NULL;
+	}
+	if (independent_thread.get())
+	{
+		independent_thread->join();
 	}
 }
 
@@ -139,6 +200,9 @@ void SpiderEesTdSpi::OnDisConnection(ERR_NO errNo, const char* pErrStr)
 {
 	LOGE(myAccount.account_id << ", EES:连接中断:"<< pErrStr);
 	smd->on_disconnected();
+	//盛立接口不会自动重连，手动重连
+	isReady = false;
+	add_task(async_task(async_task_login,NULL));
 }
 
 /// 登录消息的回调
@@ -151,6 +215,7 @@ void SpiderEesTdSpi::OnUserLogon(EES_LogonResponse* pLogon)
 	{
 		if (pLogon->m_Result != 0)
 		{
+			isReady = false;
 			LOGW(myAccount.account_id << ", EES:登录失败: " << pLogon->m_Result);
 			std::shared_ptr<SpiderErrorMsg> _err(new SpiderErrorMsg());
 			_err->ErrCode = -1;
@@ -158,6 +223,7 @@ void SpiderEesTdSpi::OnUserLogon(EES_LogonResponse* pLogon)
 			smd->on_error(_err);
 		}
 		else {
+			isReady = true;
 			LOGI(myAccount.account_id << ", EES:登陆成功，"<< pLogon->m_UserId <<"，最大单号：" << pLogon->m_MaxToken << "，流控参数：" << pLogon->m_OrderFCCount << "," << pLogon->m_OrderFCInterval << "," << pLogon->m_CancelFCCount << "," << pLogon->m_CancelFCInterval);
 			if (smd)
 			{
@@ -432,7 +498,8 @@ void SpiderEesTdSpi::OnOrderExecution(EES_OrderExecutionField* pExec)
 		strncpy(trade->Code, _ees_order->symbol.c_str(), sizeof(trade->Code) - 1);
 		sprintf_s(trade->OrderRef, sizeof(trade->OrderRef) - 1, "%d", _ees_order->client_token);
 		sprintf_s(trade->OrderSysID, sizeof(trade->OrderSysID) - 1, "%lld", _ees_order->market_token);
-		strncpy(trade->TradeID, pExec->m_MarketExecID, sizeof(trade->TradeID) - 1);
+		sprintf_s(trade->TradeID, sizeof(trade->TradeID) - 1, "%lld", pExec->m_ExecutionID);
+		//strncpy(trade->TradeID, pExec->m_MarketExecID, sizeof(trade->TradeID) - 1);
 		strncpy(trade->TradeTime, smd->get_the_time(pExec->m_Timestamp), sizeof(trade->TradeTime) - 1);
 		trade->ExchangeID = _ees_order->ex;
 		trade->Direction = _ees_order->direct;
@@ -614,8 +681,8 @@ void SpiderEesTdSpi::OnQueryTradeOrderExec(const char* pAccount, EES_QueryOrderE
 		strncpy(trade->Code, _ees_order->symbol.c_str(), sizeof(trade->Code) - 1);
 		sprintf_s(trade->OrderRef, sizeof(trade->OrderRef) - 1, "%d", _ees_order->client_token);
 		sprintf_s(trade->OrderSysID, sizeof(trade->OrderSysID) - 1, "%lld", _ees_order->market_token);
-		strncpy(trade->TradeID, pQueryOrderExec->m_MarketExecID, sizeof(trade->TradeID) - 1);
-
+		//strncpy(trade->TradeID, pQueryOrderExec->m_MarketExecID, sizeof(trade->TradeID) - 1);
+		sprintf_s(trade->TradeID, sizeof(trade->TradeID) - 1, "%lld", pQueryOrderExec->m_ExecutionID);
 		strncpy(trade->TradeTime, smd->get_the_time(pQueryOrderExec->m_Timestamp), sizeof(trade->TradeTime) - 1);
 		trade->ExchangeID = _ees_order->ex;
 		trade->Direction = _ees_order->direct;
@@ -665,6 +732,12 @@ const char * SpiderEesTdSession::insert_order(OrderInsert * order)
 	EES_EnterOrderField field;
 	memset(&field, 0, sizeof(field));
 
+	field.m_ClientOrderToken = get_real_order_ref(atoi(order->OrderRef));
+
+	//返回值
+	sprintf_s(_order_ref, 13, "%d", field.m_ClientOrderToken);
+	//delete[] _order_ref; //要在使用的地方删除掉,api使用者自己释放
+
 	field.m_Tif = EES_OrderTif_Day;
 	field.m_HedgeFlag = EES_HedgeFlag_Speculation;
 
@@ -706,19 +779,55 @@ const char * SpiderEesTdSession::insert_order(OrderInsert * order)
 		_err->ErrCode = -1;
 		strncpy(_err->ErrMsg, "错误的开平方向", sizeof(_err->ErrMsg) - 1);
 		on_error(_err);
+
+		OrderInfo * failorder = new OrderInfo();
+		memset(failorder, 0, sizeof(OrderInfo));
+		strncpy(failorder->Code, order->Code, sizeof(failorder->Code) - 1);
+		strncpy(failorder->OrderRef, _order_ref, sizeof(failorder->OrderRef) - 1);
+		failorder->ExchangeID = order->ExchangeID;
+		failorder->Direction = order->Direction;
+		failorder->Offset = order->Offset;
+		failorder->HedgeFlag = order->HedgeFlag;
+		failorder->LimitPrice = order->LimitPrice;
+		failorder->VolumeTotalOriginal = order->VolumeTotalOriginal;
+		failorder->OrderStatus = -1; //约定好的失败
+		strncpy(failorder->StatusMsg, "错误的开平方向", sizeof(failorder->StatusMsg) - 1);
+		tradeConnection->add_task(async_task(async_task_send_order_fail, failorder));
+
 		return _order_ref;
 	}
 	}
 
-	field.m_Exchange = get_exid_from_ees(order->ExchangeID);
+	if (!tradeConnection->ready())
+	{
+		LOGW("Warning: EES EnterOrder, 盛立服务器尚未登录");
+		std::shared_ptr<SpiderErrorMsg> _err(new SpiderErrorMsg());
+		_err->ErrCode = -1;
+		strncpy(_err->ErrMsg, "盛立服务器尚未登录", sizeof(_err->ErrMsg) - 1);
+		on_error(_err);
+
+		OrderInfo * failorder = new OrderInfo();
+		memset(failorder, 0, sizeof(OrderInfo));
+		strncpy(failorder->Code, order->Code, sizeof(failorder->Code) - 1);
+		strncpy(failorder->OrderRef, _order_ref, sizeof(failorder->OrderRef) - 1);
+		failorder->ExchangeID = order->ExchangeID;
+		failorder->Direction = order->Direction;
+		failorder->Offset = order->Offset;
+		failorder->HedgeFlag = order->HedgeFlag;
+		failorder->LimitPrice = order->LimitPrice;
+		failorder->VolumeTotalOriginal = order->VolumeTotalOriginal;
+		failorder->OrderStatus = -1; //约定好的失败
+		strncpy(failorder->StatusMsg, "盛立服务器尚未登录", sizeof(failorder->StatusMsg) - 1);
+		tradeConnection->add_task(async_task(async_task_send_order_fail, failorder));
+
+		return _order_ref;
+	}
+
+	field.m_Exchange = get_exid_to_ees((EnumExchangeIDType)order->ExchangeID);
 	field.m_SecType = EES_SecType_fut;
 	field.m_Price = order->LimitPrice;
 	field.m_Qty = order->VolumeTotalOriginal;
-	field.m_ClientOrderToken = get_real_order_ref(atoi(order->OrderRef));
 
-	//返回值
-	sprintf_s(_order_ref, 13, "%d", field.m_ClientOrderToken);
-	//delete[] _order_ref; //要在使用的地方删除掉,api使用者自己释放
 
 	std::shared_ptr<ees_order> _ees_order(new ees_order(order));
 	{
@@ -735,6 +844,20 @@ const char * SpiderEesTdSession::insert_order(OrderInsert * order)
 		_err->ErrCode = r;
 		strncpy(_err->ErrMsg, "EnterOrder调用失败", sizeof(_err->ErrMsg) - 1);
 		on_error(_err);
+
+		OrderInfo * failorder = new OrderInfo();
+		memset(failorder, 0, sizeof(OrderInfo));
+		strncpy(failorder->Code, order->Code, sizeof(failorder->Code) - 1);
+		strncpy(failorder->OrderRef, _order_ref, sizeof(failorder->OrderRef) - 1);
+		failorder->ExchangeID = order->ExchangeID;
+		failorder->Direction = order->Direction;
+		failorder->Offset = order->Offset;
+		failorder->HedgeFlag = order->HedgeFlag;
+		failorder->LimitPrice = order->LimitPrice;
+		failorder->VolumeTotalOriginal = order->VolumeTotalOriginal;
+		failorder->OrderStatus = -1; //约定好的失败
+		strncpy(failorder->StatusMsg, "EnterOrder调用失败", sizeof(failorder->StatusMsg) - 1);
+		tradeConnection->add_task(async_task(async_task_send_order_fail, failorder));
 	}
 
 	return _order_ref;
@@ -748,6 +871,17 @@ void SpiderEesTdSession::cancel_order(OrderCancel * order)
 	strncpy(action.m_Account, get_account().account_id, sizeof(action.m_Account) - 1);
 	action.m_MarketOrderToken = atoll(order->OrderSysID);
 	LOGD(get_account().account_id << ":EES Withdraw: " << action.m_MarketOrderToken);
+
+	if (!tradeConnection->ready())
+	{
+		LOGW("Warning: EES EnterOrder, 盛立服务器尚未登录");
+		std::shared_ptr<SpiderErrorMsg> _err(new SpiderErrorMsg());
+		_err->ErrCode = -1;
+		strncpy(_err->ErrMsg, "盛立服务器尚未登录", sizeof(_err->ErrMsg) - 1);
+		on_error(_err);
+		return;
+	}
+
 	int r = tradeConnection->getUserApi()->CancelOrder(&action);
 	if (r != 0)
 	{
@@ -761,6 +895,16 @@ void SpiderEesTdSession::cancel_order(OrderCancel * order)
 
 void SpiderEesTdSession::query_trading_account(int request_id)
 {
+	if (!tradeConnection->ready())
+	{
+		LOGW("Warning: EES EnterOrder, 盛立服务器尚未登录");
+		std::shared_ptr<SpiderErrorMsg> _err(new SpiderErrorMsg());
+		_err->ErrCode = -1;
+		strncpy(_err->ErrMsg, "盛立服务器尚未登录", sizeof(_err->ErrMsg) - 1);
+		on_error(_err);
+		return;
+	}
+
 	{
 		std::unique_lock<std::mutex> l(cache_mutex);
 		auto it = cache_account_info.find(request_id);
@@ -790,6 +934,16 @@ void SpiderEesTdSession::query_trading_account(int request_id)
 }
 void SpiderEesTdSession::query_positions(int request_id)
 {
+	if (!tradeConnection->ready())
+	{
+		LOGW("Warning: EES EnterOrder, 盛立服务器尚未登录");
+		std::shared_ptr<SpiderErrorMsg> _err(new SpiderErrorMsg());
+		_err->ErrCode = -1;
+		strncpy(_err->ErrMsg, "盛立服务器尚未登录", sizeof(_err->ErrMsg) - 1);
+		on_error(_err);
+		return;
+	}
+
 	{
 		std::unique_lock<std::mutex> l(cache_mutex);
 		auto it = cache_positions_info.find(request_id);
@@ -818,6 +972,16 @@ void SpiderEesTdSession::query_positions(int request_id)
 }
 void SpiderEesTdSession::query_orders(int request_id)
 {
+	if (!tradeConnection->ready())
+	{
+		LOGW("Warning: EES EnterOrder, 盛立服务器尚未登录");
+		std::shared_ptr<SpiderErrorMsg> _err(new SpiderErrorMsg());
+		_err->ErrCode = -1;
+		strncpy(_err->ErrMsg, "盛立服务器尚未登录", sizeof(_err->ErrMsg) - 1);
+		on_error(_err);
+		return;
+	}
+
 	request_id = 88; //因为盛立接口中没有request_id
 	{
 		std::unique_lock<std::mutex> l(cache_mutex);
@@ -847,6 +1011,16 @@ void SpiderEesTdSession::query_orders(int request_id)
 }
 void SpiderEesTdSession::query_trades(int request_id)
 {
+	if (!tradeConnection->ready())
+	{
+		LOGW("Warning: EES EnterOrder, 盛立服务器尚未登录");
+		std::shared_ptr<SpiderErrorMsg> _err(new SpiderErrorMsg());
+		_err->ErrCode = -1;
+		strncpy(_err->ErrMsg, "盛立服务器尚未登录", sizeof(_err->ErrMsg) - 1);
+		on_error(_err);
+		return;
+	}
+
 	request_id = 89; //因为盛立接口中没有request_id
 	{
 		std::unique_lock<std::mutex> l(cache_mutex);
@@ -1258,7 +1432,7 @@ std::shared_ptr<ees_order> SpiderEesTdSession::get_ees_order(int orderref)
 
 const char * SpiderEesTdSession::get_the_time(unsigned long long int nanosec)
 {
-	static char nowString1[7] = {0};
+	static char nowString1[12] = {0};
 	struct tm tmResult;
 	unsigned int nanoSsec;
 	tradeConnection->getUserApi()->ConvertFromTimestamp(nanosec, tmResult, nanoSsec);

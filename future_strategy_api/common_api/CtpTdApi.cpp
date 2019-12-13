@@ -622,7 +622,7 @@ const char * SpiderCtpTdSession::insert_order(OrderInsert * order)
 	strncpy(field.InvestorID, get_account().account_id, sizeof(field.InvestorID) - 1);
 	strncpy(field.UserID, get_account().account_id, sizeof(field.UserID) - 1);
 	strncpy(field.InstrumentID, order->Code, sizeof(field.InstrumentID) - 1);
-	strncpy(field.ExchangeID, get_exid_from_ctp((EnumExchangeIDType)order->ExchangeID), sizeof(field.ExchangeID) - 1);
+	strncpy(field.ExchangeID, get_exid_to_ctp((EnumExchangeIDType)order->ExchangeID), sizeof(field.ExchangeID) - 1);
 	field.OrderPriceType = THOST_FTDC_OPT_LimitPrice;
 	field.Direction = order->Direction == EnumDirectionType::Buy ? THOST_FTDC_D_Buy : THOST_FTDC_D_Sell;
 	switch (order->Offset)
@@ -695,7 +695,7 @@ void SpiderCtpTdSession::cancel_order(OrderCancel * order)
 {
 	CThostFtdcInputOrderActionField action;
 	memset(&action, 0, sizeof(action));
-	strncpy(action.ExchangeID, get_exid_from_ctp((EnumExchangeIDType)order->ExchangeID), sizeof(action.ExchangeID) - 1);
+	strncpy(action.ExchangeID, get_exid_to_ctp((EnumExchangeIDType)order->ExchangeID), sizeof(action.ExchangeID) - 1);
 	strncpy(action.InstrumentID, order->Code, sizeof(action.InstrumentID) -1);// ºÏÔ¼´úÂë
 	strncpy(action.OrderSysID, order->OrderSysID, sizeof(action.OrderSysID)-1);
 	//strncpy(action.OrderRef, order->OrderRef, sizeof(action.OrderRef) - 1);

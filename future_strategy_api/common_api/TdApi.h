@@ -10,6 +10,21 @@
 #include <set>
 #include <vector>
 
+enum async_task_id
+{
+	async_task_unset = 0,
+	async_task_login = 1,
+	async_task_send_order_fail = 2,
+};
+
+struct async_task
+{
+	async_task_id task_id;
+	void * task_data;
+	async_task() :task_id(async_task_unset), task_data(NULL) {}
+	async_task(async_task_id _id, void * _p) :task_id(_id), task_data(_p) {}
+};
+
 class SpiderCommonApi;
 class BaseTradeSession
 {

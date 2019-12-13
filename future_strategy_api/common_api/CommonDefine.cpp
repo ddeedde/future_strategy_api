@@ -60,12 +60,27 @@ const char * get_order_ref(const char * prefix)
 
 //=============================================================
 
+int get_exid_from_index_mul(const char * strex)
+{
+	if (strcmp(strex,"SZ") == 0)
+	{
+		return (int)EnumExchangeIDType::SZSE;
+	}
+	else if (strcmp(strex, "SH") == 0)
+	{
+		return (int)EnumExchangeIDType::SSE;
+	}
+	else {
+		return (int)EnumExchangeIDType::SSE;
+	}
+}
+
 int get_exid_from_ctp(const char * strex) 
 {
 	return (int)EnumExchangeIDType::CFFEX;
 }
 
-const char * get_exid_from_ctp(EnumExchangeIDType enumex)
+const char * get_exid_to_ctp(EnumExchangeIDType enumex)
 {
 	return "CFFEX";
 }
@@ -212,7 +227,7 @@ int get_exid_from_ees(unsigned char strex)
 		return -1;
 	}
 }
-unsigned char get_exid_from_ees(EnumExchangeIDType enumex)
+unsigned char get_exid_to_ees(EnumExchangeIDType enumex)
 {
 	switch (enumex)
 	{

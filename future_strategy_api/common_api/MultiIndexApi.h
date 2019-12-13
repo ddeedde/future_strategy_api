@@ -94,7 +94,6 @@ public:
 
 private:
 	std::shared_ptr<SpiderMultiIndexSpi> marketConnection;
-
 };
 
 

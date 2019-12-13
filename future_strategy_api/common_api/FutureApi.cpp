@@ -147,6 +147,7 @@ bool SpiderCommonApi::init(const char * account_id, int account_type )
 			case EnumAccountDetailType::AccountMarketIndexMulticast:
 			{
 				market_session.reset(new SpiderMultiIndexSession(this, _ci));
+				market_session->setTest(my_config.is_test);
 				return market_session->init();
 			}
 			default:
@@ -310,15 +311,6 @@ void SpiderCommonApi::marketUnSubscribe(char *codes[], int count)
 		market_session->unsubscribe(contracts);
 	}
 }
-
-//void SpiderCommonApi::setMarketCallBack(marketOnConnect c1, marketOnDisconnect c2, marketOnLogin c3, marketOnLogout c4, marketOnDataArrive c5)
-//{
-//	callMarketConnect = c1;
-//	callMarketDisconnect = c2;
-//	callMarketLogin = c3;
-//	callMarketLogout = c4;
-//	callMarketDataArrive = c5;
-//}
 
 void SpiderCommonApi::registerSpi(SpiderSpi *pSpi)
 {

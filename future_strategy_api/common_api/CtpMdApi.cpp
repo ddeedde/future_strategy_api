@@ -202,7 +202,7 @@ void SpiderCtpMdSpi::OnRtnDepthMarketData(CThostFtdcDepthMarketDataField *pDepth
 {
 	if (pDepthMarketData != NULL)
 	{
-		if (++recv_count % 100 == 0)
+		if (++recv_count % 1000 == 0)
 		{
 			LOGD("SpiderCtpMdSpi received: " << recv_count);
 		}

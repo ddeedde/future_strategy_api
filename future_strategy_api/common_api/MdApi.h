@@ -15,8 +15,9 @@ class BaseMarketSession
 {
 public:
 	BaseMarketSession(SpiderCommonApi * sci, AccountInfo & ai)
-		:spider_common_api(sci)
-		,account_info(ai)
+		: spider_common_api(sci)
+		, account_info(ai)
+		, is_test(false)
 	{}
 
 	virtual ~BaseMarketSession() {}
@@ -40,12 +41,14 @@ public:
 	std::vector<std::string> get_subscribed_list();
 	void updateSubscribedList(const char * ins, bool del = false);
 	bool ifSubscribed(const char * ins);
-
+	void setTest(bool test) { is_test = test; }
+	bool ifTest() { return is_test; }
 protected:
 	AccountInfo account_info;
 	SpiderCommonApi * spider_common_api;
 	std::set<std::string> subscribed_symbol_list;
 	std::mutex subscribed_symbol_mutex;
+	bool is_test; //test模式下不过滤快照行情
 };
 
 
