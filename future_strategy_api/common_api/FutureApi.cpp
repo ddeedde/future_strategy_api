@@ -260,11 +260,7 @@ void SpiderCommonApi::quoteWorker()
 			QuotaData * md = quote_queue.front();
 			quote_queue.pop_front();
 			l.unlock();
-			//todo
-			//if (callMarketDataArrive != NULL)
-			//{
-			//	callMarketDataArrive(md);
-			//}
+
 			if (notifySpi != NULL)
 			{
 				notifySpi->marketOnDataArrive(md);
