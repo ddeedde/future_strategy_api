@@ -140,6 +140,8 @@
     <ClInclude Include="EesTdApi.h" />
     <ClInclude Include="log4z.h" />
     <ClInclude Include="LogWrapper.h" />
+    <ClInclude Include="MultiIndexDZ.h" />
+    <ClInclude Include="MultiFutureDZ.h" />
     <ClInclude Include="SpiderApiStruct.h" />
     <ClInclude Include="SpiderCommonApi.h" />
     <ClInclude Include="CtpMdApi.h" />
@@ -158,6 +160,8 @@
     <ClCompile Include="log4z.cpp" />
     <ClCompile Include="LogWrapper.cpp" />
     <ClCompile Include="MdApi.cpp" />
+    <ClCompile Include="MultiFutureDZ.cpp" />
+    <ClCompile Include="MultiIndexDZ.cpp" />
     <ClCompile Include="SpiderCommonApi.cpp" />
     <ClCompile Include="CtpMdApi.cpp" />
     <ClCompile Include="FutureApi.cpp" />

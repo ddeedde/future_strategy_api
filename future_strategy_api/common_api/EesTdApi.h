@@ -11,6 +11,17 @@
 #include <map>
 #include <deque>
 
+/*
+NO_ERROR	0	调用正常，没有错误
+CONN_SERVER_FAILED	1	连接服务器失败
+REMOTE_DISCONN_SERVER	2	远端服务器断开
+LOCAL_DISCONN_SERVER	3	本地主动断开服务器连接
+NEWWORK_ERROR	4	网络异常
+LOGON_FAILED	5	登录失败
+NOT_LOGON	6	没有正常登录
+NO_CONN_SERVER	7	没有连接到服务器
+HANDLE_ERRNOR	8	API对象句柄错误
+*/
 
 struct ees_order
 {
@@ -66,6 +77,7 @@ public:
 	void login();
 	//void authenticate(); //看穿式认证
 	bool ready() { return isReady; }
+	void setReady(bool rd) { isReady = rd; };
 
 	void add_task(async_task _t);
 	void process_task();

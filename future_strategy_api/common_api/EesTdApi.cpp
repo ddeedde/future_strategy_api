@@ -89,7 +89,7 @@ void SpiderEesTdSpi::process_task()
 {
 	while (userApi)
 	{
-		std::this_thread::sleep_for(std:: chrono::seconds(1));	
+		std::this_thread::sleep_for(std:: chrono::milliseconds(500));	
 		async_task _task;
 		{
 			std::unique_lock<std::mutex> l(task_mutex);
@@ -105,6 +105,10 @@ void SpiderEesTdSpi::process_task()
 		case async_task_login:
 		{
 			LOGI(myAccount.account_id << ", EES:开始重新连接");
+			if (userApi)
+			{
+				userApi->DisConnServer();
+			}
 			start();
 			break;
 		}
@@ -185,7 +189,7 @@ void SpiderEesTdSpi::login()
 ///	\return void  
 void SpiderEesTdSpi::OnConnection(ERR_NO errNo, const char* pErrStr)
 {
-	LOGI(myAccount.account_id << ", EES:连接成功:"<< pErrStr);
+	LOGI(myAccount.account_id << ", EES:连接成功:"<< errNo <<", "<< pErrStr);
 	smd->on_connected();
 	login();
 }
@@ -198,11 +202,14 @@ void SpiderEesTdSpi::OnConnection(ERR_NO errNo, const char* pErrStr)
 /// \return void  
 void SpiderEesTdSpi::OnDisConnection(ERR_NO errNo, const char* pErrStr)
 {
-	LOGE(myAccount.account_id << ", EES:连接中断:"<< pErrStr);
-	smd->on_disconnected();
-	//盛立接口不会自动重连，手动重连
-	isReady = false;
-	add_task(async_task(async_task_login,NULL));
+	LOGE(myAccount.account_id << ", EES:连接中断:" << errNo << ", " << pErrStr); //因为盛立接口中没有心跳，所以该回调不靠谱，应该在每个接口调用的返回值中判断是否断连，然后直接重连
+	if (isReady)
+	{
+		isReady = false;
+		smd->on_disconnected();
+		//盛立接口不会自动重连，手动重连	
+		add_task(async_task(async_task_login, NULL));
+	}
 }
 
 /// 登录消息的回调
@@ -259,6 +266,7 @@ void SpiderEesTdSpi::OnQueryAccountPosition(const char* pAccount, EES_AccountPos
 {
 	if (pAccoutnPosition)
 	{
+		LOGD(myAccount.account_id << ", EES:查询持仓，" << pAccount << "," << pAccoutnPosition->m_Symbol << "," << pAccoutnPosition->m_PosiDirection << "," << pAccoutnPosition->m_TodayQty<<","<< pAccoutnPosition->m_OvnQty);
 		InvestorPosition * pos = new InvestorPosition;
 		memset(pos, 0, sizeof(InvestorPosition));
 		strncpy(pos->AccountID, pAccount, sizeof(pos->AccountID) - 1);
@@ -289,6 +297,7 @@ void SpiderEesTdSpi::OnQueryAccountBP(const char* pAccount, EES_AccountBP* pAcco
 {
 	if (pAccoutnPosition)
 	{
+		LOGD(myAccount.account_id << ", EES:查询资金，"<< pAccount<<","<< pAccoutnPosition->m_AvailableBp<<","<<pAccoutnPosition->m_InitialBp<<","<< pAccoutnPosition->m_Margin);
 		TradingAccount * account = new TradingAccount();
 		memset(account, 0, sizeof(TradingAccount));
 		strncpy(account->AccountID, pAccount, sizeof(account->AccountID) - 1);
@@ -858,6 +867,15 @@ const char * SpiderEesTdSession::insert_order(OrderInsert * order)
 		failorder->OrderStatus = -1; //约定好的失败
 		strncpy(failorder->StatusMsg, "EnterOrder调用失败", sizeof(failorder->StatusMsg) - 1);
 		tradeConnection->add_task(async_task(async_task_send_order_fail, failorder));
+
+		//开始触发重连
+		if (r <= NO_CONN_SERVER && tradeConnection->ready())
+		{
+			tradeConnection->setReady(false);
+			on_disconnected();
+			//盛立接口不会自动重连，手动重连			
+			tradeConnection->add_task(async_task(async_task_login, NULL));
+		}
 	}
 
 	return _order_ref;
@@ -890,6 +908,15 @@ void SpiderEesTdSession::cancel_order(OrderCancel * order)
 		_err->ErrCode = r;
 		strncpy(_err->ErrMsg, "CancelOrder调用失败", sizeof(_err->ErrMsg) - 1);
 		on_error(_err);
+
+		//开始触发重连
+		if (r <= NO_CONN_SERVER && tradeConnection->ready())
+		{
+			tradeConnection->setReady(false);
+			on_disconnected();
+			//盛立接口不会自动重连，手动重连			
+			tradeConnection->add_task(async_task(async_task_login, NULL));
+		}
 	}
 }
 
@@ -929,6 +956,15 @@ void SpiderEesTdSession::query_trading_account(int request_id)
 		_err->ErrCode = result;
 		strncpy(_err->ErrMsg, "QueryAccountBP调用失败", sizeof(_err->ErrMsg) - 1);
 		on_error(_err);
+
+		//开始触发重连
+		if (result <= NO_CONN_SERVER && tradeConnection->ready())
+		{
+			tradeConnection->setReady(false);
+			on_disconnected();
+			//盛立接口不会自动重连，手动重连			
+			tradeConnection->add_task(async_task(async_task_login, NULL));
+		}
 	}
 
 }
@@ -968,6 +1004,15 @@ void SpiderEesTdSession::query_positions(int request_id)
 		_err->ErrCode = result;
 		strncpy(_err->ErrMsg, "QueryAccountPosition调用失败", sizeof(_err->ErrMsg) - 1);
 		on_error(_err);
+
+		//开始触发重连
+		if (result <= NO_CONN_SERVER && tradeConnection->ready())
+		{
+			tradeConnection->setReady(false);
+			on_disconnected();
+			//盛立接口不会自动重连，手动重连			
+			tradeConnection->add_task(async_task(async_task_login, NULL));
+		}
 	}
 }
 void SpiderEesTdSession::query_orders(int request_id)
@@ -1007,6 +1052,15 @@ void SpiderEesTdSession::query_orders(int request_id)
 		_err->ErrCode = result;
 		strncpy(_err->ErrMsg, "QueryAccountOrder调用失败", sizeof(_err->ErrMsg) - 1);
 		on_error(_err);
+
+		//开始触发重连
+		if (result <= NO_CONN_SERVER && tradeConnection->ready())
+		{
+			tradeConnection->setReady(false);
+			on_disconnected();
+			//盛立接口不会自动重连，手动重连			
+			tradeConnection->add_task(async_task(async_task_login, NULL));
+		}
 	}
 }
 void SpiderEesTdSession::query_trades(int request_id)
@@ -1046,6 +1100,15 @@ void SpiderEesTdSession::query_trades(int request_id)
 		_err->ErrCode = result;
 		strncpy(_err->ErrMsg, "QueryAccountOrderExecution调用失败", sizeof(_err->ErrMsg) - 1);
 		on_error(_err);
+
+		//开始触发重连
+		if (result <= NO_CONN_SERVER && tradeConnection->ready())
+		{
+			tradeConnection->setReady(false);
+			on_disconnected();
+			//盛立接口不会自动重连，手动重连			
+			tradeConnection->add_task(async_task(async_task_login, NULL));
+		}
 	}
 }
 

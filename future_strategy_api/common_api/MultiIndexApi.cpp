@@ -49,24 +49,24 @@ bool SpiderMultiIndexSpi::init(SpiderMultiIndexSession * sm)
 		return false;
 	}
 	std::vector<std::string> ips;
-	split_str(sm->get_account().uri_list[0],ips,":");
-	if (ips.size() != 3)
+	split_str(sm->get_account().uri_list[0], ips, ":");
+	if (ips.size() != 4)
 	{
-		LOGE("配置文件中组播地址格式错误：mul://230.0.0.1:31001");
+		LOGE("配置文件中组播地址格式错误：mul://230.0.0.1:31001:192.168.79.56");
 		return false;
 	}
 	replace_all(ips[1],"/", "");
 	mul_ip = ips[1];
 	mul_port = atoi(ips[2].c_str());
-
+	local_ip = ips[3];
 	try
 	{
-		LOGI("join multicast group : " << mul_ip << ":" << mul_port << " on interface " << "0.0.0.0");
+		LOGI("join multicast group : " << mul_ip << ":" << mul_port << " on interface " << local_ip);
 		mul_socket.open(boost::asio::ip::udp::v4());
 		mul_socket.set_option(boost::asio::socket_base::receive_buffer_size(1024 * 8000));
 		mul_socket.set_option(boost::asio::ip::udp::socket::reuse_address(true));
 		mul_socket.set_option(boost::asio::ip::multicast::join_group(boost::asio::ip::address_v4(boost::asio::ip::address_v4::from_string(mul_ip)), 
-																boost::asio::ip::address_v4(boost::asio::ip::address_v4::from_string("0.0.0.0"))));
+																boost::asio::ip::address_v4(boost::asio::ip::address_v4::from_string(local_ip))));
 		mul_socket.bind(boost::asio::ip::udp::endpoint(boost::asio::ip::udp::v4(), mul_port));
 	
 	}
@@ -138,7 +138,7 @@ void SpiderMultiIndexSpi::handle_receive_from(const boost::system::error_code& e
 	//LOGD(bytes_recvd<<', '<< sizeof(MarketDataIndex));
 	if (bytes_recvd == sizeof(MarketDataIndex))
 	{
-		if (++recv_count % 1000 == 0)
+		if (recv_count++ % 2000 == 0)
 		{
 			LOGD("SpiderMultiIndexSpi received: "<<recv_count);
 		}
@@ -177,13 +177,17 @@ void SpiderMultiIndexSpi::handle_receive_from(const boost::system::error_code& e
 				smd->on_receive_data(md);
 			}		
 		}
-			
+		LOGD("my index:"<<md->Code << "," << md->LastPrice << "," << md->Volume << "," << get_not_microsec() << ":" << _index.Time ); //just for test
 	}
 
 	async_receive();
 }
 
-
+long long SpiderMultiIndexSpi::get_not_microsec()
+{
+	boost::posix_time::ptime tm = boost::posix_time::microsec_clock::local_time();
+	return (long long)tm.time_of_day().total_microseconds();
+}
 
 
 

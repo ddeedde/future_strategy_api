@@ -62,11 +62,11 @@ const char * get_order_ref(const char * prefix)
 
 int get_exid_from_index_mul(const char * strex)
 {
-	if (strcmp(strex,"SZ") == 0)
+	if (strncmp(strex,"SZ",2) == 0)
 	{
 		return (int)EnumExchangeIDType::SZSE;
 	}
-	else if (strcmp(strex, "SH") == 0)
+	else if (strncmp(strex, "SH",2) == 0)
 	{
 		return (int)EnumExchangeIDType::SSE;
 	}

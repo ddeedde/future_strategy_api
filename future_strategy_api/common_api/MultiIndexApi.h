@@ -12,7 +12,7 @@
 #include "boost/scoped_ptr.hpp"
 #include "boost/thread.hpp"
 #include "boost/shared_ptr.hpp"
-
+#include "boost/date_time.hpp"
 
 struct MarketDataIndex
 {
@@ -53,6 +53,9 @@ public:
 
 	bool init(SpiderMultiIndexSession * sm);
 	void start();
+
+	long long get_not_microsec();
+
 private:
 	void async_receive();
 	void handle_receive_from(const boost::system::error_code& error, size_t bytes_recvd);
@@ -68,6 +71,7 @@ private:
 	char m_data[10240];
 	std::string mul_ip;
 	int mul_port;
+	std::string local_ip;
 	int recv_count;
 };
 

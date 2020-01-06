@@ -207,7 +207,7 @@ void SpiderEesMdSpi::OnQuoteUpdated(EesEqsIntrumentType chInstrumentType, EESMar
 {
 	if (pDepthQuoteData != NULL)
 	{
-		if (++recv_count % 1000 == 0)
+		if (recv_count++ % 1000 == 0)
 		{
 			LOGD("SpiderEESMdSpi received: " << recv_count<<", ex:"<< pDepthQuoteData->ExchangeID);
 		}
@@ -238,6 +238,7 @@ void SpiderEesMdSpi::OnQuoteUpdated(EesEqsIntrumentType chInstrumentType, EESMar
 
 		if (smd)
 			smd->on_receive_data(md);
+		LOGD("ees future api:" << md->Code << "," << md->LastPrice << "," << md->Volume << "," << pDepthQuoteData->UpdateTime << "-" << pDepthQuoteData->UpdateMillisec); //just for test
 	}
 }
 

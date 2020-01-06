@@ -66,6 +66,12 @@
     <ClInclude Include="EesTdApi.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="MultiIndexDZ.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="MultiFutureDZ.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="log4z.cpp">
@@ -105,6 +111,12 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="MdApi.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="MultiIndexDZ.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="MultiFutureDZ.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

@@ -5,6 +5,8 @@
 #include "CtpTdApi.h"
 #include "EesMdApi.h"
 #include "EesTdApi.h"
+#include "MultiIndexDZ.h"
+#include "MultiFutureDZ.h"
 
 SpiderCommonApi::SpiderCommonApi()
 	: market_running(false)
@@ -113,6 +115,11 @@ bool SpiderCommonApi::init(const char * account_id, int account_type )
 				market_session.reset(new SpiderEesMdSession(this, _ci));
 				return market_session->init();
 			}
+			case EnumAccountDetailType::AccountMarketFutureMulticastDZ:
+			{
+				market_session.reset(new SpiderMultiFutureDZSession(this, _ci));
+				return market_session->init();
+			}
 			default:
 				LOGE("该期货行情账户配置文件中的类型未知");
 				if (notifySpi)
@@ -148,6 +155,11 @@ bool SpiderCommonApi::init(const char * account_id, int account_type )
 			{
 				market_session.reset(new SpiderMultiIndexSession(this, _ci));
 				market_session->setTest(my_config.is_test);
+				return market_session->init();
+			}
+			case EnumAccountDetailType::AccountMarketIndexMulticastDZ:
+			{
+				market_session.reset(new SpiderMultiIndexDZSession(this, _ci));
 				return market_session->init();
 			}
 			default:
