@@ -330,7 +330,8 @@ void SpiderEesTdSpi::OnOrderAccept(EES_OrderAcceptField* pAccept)
 		std::shared_ptr<ees_order> _ees_order;
 		if (smd)
 		{
-			smd->insert_market_token(pAccept->m_ClientOrderToken, pAccept->m_MarketOrderToken);
+			smd->update_order_accept_tm(pAccept->m_ClientOrderToken, pAccept->m_AcceptTime);
+			smd->insert_market_token(pAccept->m_ClientOrderToken, pAccept->m_MarketOrderToken);			
 			_ees_order = smd->get_ees_order(pAccept->m_ClientOrderToken);
 		}
 		if (_ees_order.get() == NULL)
@@ -354,6 +355,7 @@ void SpiderEesTdSpi::OnOrderAccept(EES_OrderAcceptField* pAccept)
 		order->HedgeFlag = _ees_order->hedge;
 		order->Offset = _ees_order->offset;
 		strncpy(order->StatusMsg, "柜台确认", sizeof(order->StatusMsg) - 1);
+		strncpy(order->OrderTime, smd->get_the_time(pAccept->m_AcceptTime), sizeof(order->OrderTime) - 1);
 		if (smd)
 			smd->on_order_change(order);
 		delete order;
@@ -397,6 +399,7 @@ void SpiderEesTdSpi::OnOrderMarketAccept(EES_OrderMarketAcceptField* pAccept)
 		order->HedgeFlag = _ees_order->hedge;
 		order->Offset = _ees_order->offset;
 		strncpy(order->StatusMsg, "交易所确认", sizeof(order->StatusMsg) - 1);
+		strncpy(order->OrderTime, smd->get_the_time(_ees_order->order_time), sizeof(order->OrderTime) - 1);
 		if (smd)
 			smd->on_order_change(order);
 		delete order;
@@ -535,6 +538,7 @@ void SpiderEesTdSpi::OnOrderExecution(EES_OrderExecutionField* pExec)
 		order->HedgeFlag = _ees_order->hedge;
 		order->Offset = _ees_order->offset;
 		strncpy(order->StatusMsg, "成交中", sizeof(order->StatusMsg) - 1);
+		strncpy(order->OrderTime, smd->get_the_time(_ees_order->order_time), sizeof(order->OrderTime) - 1);
 		smd->on_order_change(order);
 		delete order;
 	}
@@ -588,6 +592,7 @@ void SpiderEesTdSpi::OnOrderCxled(EES_OrderCxled* pCxled)
 		order1->HedgeFlag = _ees_order->hedge;
 		order1->Offset = _ees_order->offset;
 		strncpy(order1->StatusMsg, "已撤单", sizeof(order1->StatusMsg) - 1);
+		strncpy(order1->OrderTime, smd->get_the_time(_ees_order->order_time), sizeof(order1->OrderTime) - 1);
 		if (smd)
 			smd->on_order_change(order1);
 		delete order1;
@@ -641,7 +646,6 @@ void SpiderEesTdSpi::OnQueryTradeOrder(const char* pAccount, EES_QueryAccountOrd
 {
 	if (pQueryOrder)
 	{
-
 		OrderInfo * order = new OrderInfo;
 		memset(order, 0, sizeof(OrderInfo));
 		strncpy(order->Code, pQueryOrder->m_symbol, sizeof(order->Code) - 1);
@@ -656,6 +660,7 @@ void SpiderEesTdSpi::OnQueryTradeOrder(const char* pAccount, EES_QueryAccountOrd
 		order->OrderStatus = get_orderstatus_from_ees(pQueryOrder->m_OrderStatus);
 		order->HedgeFlag = Speculation;
 		order->Offset = get_offset_from_ees(pQueryOrder->m_SideType);
+		strncpy(order->OrderTime, smd->get_the_time(pQueryOrder->m_Timestamp), sizeof(order->OrderTime) - 1);
 		if (smd)
 		{
 			smd->on_rsp_query_order(order, 88, bFinish);
@@ -1480,6 +1485,15 @@ void SpiderEesTdSession::update_deal_qty(int orderref, int qty)
 		it->second->deal_qty += qty;
 	}
 }
+void SpiderEesTdSession::update_order_accept_tm(int orderref, unsigned long long int ordertm)
+{
+	std::unique_lock<std::mutex> l(exoid_mutex);
+	auto it = orderref_order_map.find(orderref);
+	if (it != orderref_order_map.end())
+	{
+		it->second->order_time = ordertm;
+	}
+}
 std::shared_ptr<ees_order> SpiderEesTdSession::get_ees_order(int orderref)
 {
 	std::unique_lock<std::mutex> l(exoid_mutex);
@@ -1495,10 +1509,12 @@ std::shared_ptr<ees_order> SpiderEesTdSession::get_ees_order(int orderref)
 
 const char * SpiderEesTdSession::get_the_time(unsigned long long int nanosec)
 {
-	static char nowString1[12] = {0};
+	static char nowString1[16] = {0};
 	struct tm tmResult;
 	unsigned int nanoSsec;
 	tradeConnection->getUserApi()->ConvertFromTimestamp(nanosec, tmResult, nanoSsec);
-	strftime(nowString1, sizeof(nowString1), "%H:%M:%S", &tmResult);
+	char nowString[12] = { 0 };
+	strftime(nowString, sizeof(nowString), "%H:%M:%S", &tmResult);
+	sprintf_s(nowString1,sizeof(nowString1)-1 ,"%s.%d", nowString,(int)((nanosec % 1000000000)/1000000));
 	return nowString1;
 }

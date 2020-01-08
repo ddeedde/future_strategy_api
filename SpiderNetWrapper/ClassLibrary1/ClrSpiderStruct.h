@@ -223,6 +223,7 @@ namespace Spider {
 		int VolumeTraded;
 		EnumOrderStatusType OrderStatus;
 		String^ StatusMsg;
+		String^ OrderTime;
 		OrderInforField(){}
 		OrderInforField(OrderInfo * order)
 		{
@@ -239,6 +240,7 @@ namespace Spider {
 			this->VolumeTraded = order->VolumeTraded;
 			this->OrderStatus = (EnumOrderStatusType)order->OrderStatus;
 			this->StatusMsg = gcnew String(order->StatusMsg);
+			this->OrderTime = gcnew String(order->OrderTime);
 		}
 	};
 

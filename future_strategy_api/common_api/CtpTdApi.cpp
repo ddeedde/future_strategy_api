@@ -328,6 +328,7 @@ void SpiderCtpTdSpi::OnRtnOrder(CThostFtdcOrderField *pOrder)
 		order->HedgeFlag = Speculation;
 		order->Offset = get_offset_from_ctp(pOrder->CombOffsetFlag[0]);
 		strncpy(order->StatusMsg, pOrder->StatusMsg, sizeof(order->StatusMsg) - 1);
+		sprintf_s(order->OrderTime,sizeof(order->OrderTime)-1,"%s.000",pOrder->InsertTime);
 		if (smd)
 			smd->on_order_change(order);
 		delete order;
@@ -346,7 +347,8 @@ void SpiderCtpTdSpi::OnRtnTrade(CThostFtdcTradeField *pTrade)
 		strncpy(trade->OrderRef, pTrade->OrderRef, sizeof(trade->OrderRef) - 1);
 		strncpy(trade->OrderSysID, pTrade->OrderSysID, sizeof(trade->OrderSysID) - 1);
 		strncpy(trade->TradeID, pTrade->TradeID, sizeof(trade->TradeID) - 1);
-		strncpy(trade->TradeTime, pTrade->TradeTime, sizeof(trade->TradeTime) - 1);
+		sprintf_s(trade->TradeTime, sizeof(trade->TradeTime) - 1, "%s.000", pTrade->TradeTime);
+		//strncpy(trade->TradeTime, pTrade->TradeTime, sizeof(trade->TradeTime) - 1);
 		trade->ExchangeID = get_exid_from_ctp(pTrade->ExchangeID);;
 		trade->Direction = get_direction_from_ctp(pTrade->Direction);
 		trade->HedgeFlag = Speculation;
@@ -459,6 +461,7 @@ void SpiderCtpTdSpi::OnRspQryOrder(CThostFtdcOrderField *pOrder, CThostFtdcRspIn
 		order->OrderStatus = get_orderstatus_from_ctp(pOrder->OrderStatus);
 		order->HedgeFlag = Speculation;
 		order->Offset = get_offset_from_ctp(pOrder->CombOffsetFlag[0]);
+		sprintf_s(order->OrderTime, sizeof(order->OrderTime) - 1, "%s.000", pOrder->InsertTime);
 		if (smd)
 		{
 			smd->on_rsp_query_order(order, nRequestID, bIsLast);
@@ -490,7 +493,8 @@ void SpiderCtpTdSpi::OnRspQryTrade(CThostFtdcTradeField *pTrade, CThostFtdcRspIn
 		strncpy(trade->OrderRef, pTrade->OrderRef, sizeof(trade->OrderRef) - 1);
 		strncpy(trade->OrderSysID, pTrade->OrderSysID, sizeof(trade->OrderSysID) - 1);
 		strncpy(trade->TradeID, pTrade->TradeID, sizeof(trade->TradeID) - 1);
-		strncpy(trade->TradeTime, pTrade->TradeTime, sizeof(trade->TradeTime) - 1);
+		//strncpy(trade->TradeTime, pTrade->TradeTime, sizeof(trade->TradeTime) - 1);
+		sprintf_s(trade->TradeTime, sizeof(trade->TradeTime) - 1, "%s.000", pTrade->TradeTime);
 		trade->ExchangeID = get_exid_from_ctp(pTrade->ExchangeID);;
 		trade->Direction = get_direction_from_ctp(pTrade->Direction);
 		trade->HedgeFlag = Speculation;

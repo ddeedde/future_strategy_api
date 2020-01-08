@@ -176,7 +176,7 @@ void SpiderMultiFutureDZSpi::handle_receive_from(const boost::system::error_code
 		{
 			smd->on_receive_data(md);
 		}
-		LOGD("ees future:" << md->Code << "," << md->LastPrice << "," << md->AskPrice1 << "," << md->BidVolume1 << "," << md->OpenPrice << "," << md->ClosePrice << "," << md->Volume << "," << get_not_microsec() << ":" << _index.modify_time << "-" << _index.modify_milisec); //just for test
+		LOGD("ees future:" << md->Code << "," << md->LastPrice << "," << md->AskPrice1 << "," << md->BidVolume1 << "," << md->LowestPrice << "," << md->ClosePrice <<  "," << md->UpperLimitPrice << "," << md->Volume << "," << md->Turnover << ":" << _index.modify_time << "-" << _index.modify_milisec); //just for test
 
 	}
 

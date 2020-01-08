@@ -34,10 +34,11 @@ struct ees_order
 	int order_qty;
 	double order_px;
 	int deal_qty;
+	unsigned long long int order_time; //盛立的格式，盛立柜台接受订单时的时间
 	std::string symbol;
 
 	ees_order()
-		: client_token(0), market_token(0), ex(0), direct(0), hedge(0), offset(0), order_qty(0), order_px(0), deal_qty(0), symbol("")
+		: client_token(0), market_token(0), ex(0), direct(0), hedge(0), offset(0), order_qty(0), order_px(0), deal_qty(0), order_time(0), symbol("")
 	{}
 	ees_order(OrderInsert * _ord)
 	{
@@ -48,6 +49,7 @@ struct ees_order
 		order_qty = _ord->VolumeTotalOriginal;
 		order_px = _ord->LimitPrice;
 		deal_qty = 0;
+		order_time = 0;
 		symbol = _ord->Code;
 	}
 };
@@ -357,6 +359,7 @@ public:
 
 	void insert_market_token(int orderref, long long token);
 	void update_deal_qty(int orderref, int qty);
+	void update_order_accept_tm(int orderref, unsigned long long int ordertm);
 	std::shared_ptr<ees_order> get_ees_order(int orderref);
 
 	const char * get_the_time(unsigned long long int nanosec);

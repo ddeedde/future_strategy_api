@@ -177,6 +177,7 @@ struct OrderInfo
 	int VolumeTraded;	
 	int OrderStatus;
 	char StatusMsg[64];
+	char OrderTime[16];
 };
 
 struct TradeInfo
