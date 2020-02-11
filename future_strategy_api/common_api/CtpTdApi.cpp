@@ -148,7 +148,7 @@ void SpiderCtpTdSpi::OnRspUserLogin(CThostFtdcRspUserLoginField *pRspUserLogin, 
 		sprintf(myAccount.front_id, "%d", pRspUserLogin->FrontID);
 		sprintf(myAccount.session_id, "%d", pRspUserLogin->SessionID);
 		//int _exoid = atoi(pRspUserLogin->MaxOrderRef);
-		LOGD("交易所时间打印：" << getNowString() << ", " << pRspUserLogin->SHFETime << ", " << pRspUserLogin->DCETime << ", " << pRspUserLogin->CZCETime << ", " << pRspUserLogin->FFEXTime << ", " << pRspUserLogin->INETime);
+		LOGD("交易所时间打印：" << pRspUserLogin->SHFETime << ", " << pRspUserLogin->DCETime << ", " << pRspUserLogin->CZCETime << ", " << pRspUserLogin->FFEXTime << ", " << pRspUserLogin->INETime);
 		
 		//确认结算单
 		CThostFtdcSettlementInfoConfirmField field;

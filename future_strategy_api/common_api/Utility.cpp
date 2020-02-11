@@ -97,7 +97,7 @@ const char * getNowString()
 	struct tm timeinfo;
 	time ( &rawtime );
 	localtime_s(&timeinfo, &rawtime );
-	strftime(nowString, sizeof(nowString),"%H%M%S",&timeinfo);
+	strftime(nowString, sizeof(nowString),"%H:%M:%S",&timeinfo);
 	return nowString;
 }
 

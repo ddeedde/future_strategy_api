@@ -149,7 +149,12 @@ void SpiderMultiIndexSpi::handle_receive_from(const boost::system::error_code& e
 		md->UpdateMillisec = 0;
 		memcpy(md->TradingDay, getTodayString(), sizeof(md->TradingDay) - 1);
 		memcpy(md->Code, _index.SecID, sizeof(md->Code) - 1);
-		memcpy(md->UpdateTime, getNowString(), sizeof(md->UpdateTime) - 1);
+		//memcpy(md->UpdateTime, getNowString(), sizeof(md->UpdateTime) - 1);
+		int _hour = _index.Time / 10000000;
+		int _minite = _index.Time / 100000 - _hour * 100;
+		int _second = (_index.Time / 1000) % 100;
+		sprintf_s(md->UpdateTime, sizeof(md->UpdateTime) - 1,"%.2d:%.2d:%.2d", _hour,_minite,_second); //维持 09:30:00 这样的格式
+
 		md->AskPrice1 = 0;
 		md->AskVolume1 = 0;
 		md->BidPrice1 = 0;
@@ -177,7 +182,7 @@ void SpiderMultiIndexSpi::handle_receive_from(const boost::system::error_code& e
 				smd->on_receive_data(md);
 			}		
 		}
-		LOGD("my index:"<<md->Code << "," << md->LastPrice << "," << md->Volume << "," << get_not_microsec() << ":" << _index.Time ); //just for test
+		LOGD("my index:"<<md->Code << "," << md->LastPrice << "," << md->Volume << "," << md->UpdateTime << ":" << _index.Time ); //just for test
 	}
 
 	async_receive();

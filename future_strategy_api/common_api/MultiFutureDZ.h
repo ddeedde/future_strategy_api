@@ -15,50 +15,7 @@
 #include "boost/date_time.hpp"
 
 //东证期货机房中收取Level的中金所期货，通过组播的方式
-namespace Future_DZ
-{
-#pragma pack(1)
-	struct pankou_info
-	{
-		int16_t head;
-		int16_t length;
-		double bid_price;
-		int bid_vol;
-		double ask_price;
-		int ask_vol;
-	};
-	struct level2_future_zj
-	{
-		char unkonw[8];
-		int seq;
-		int16_t struct_num;
-		int16_t length;
-		char reserved[4];
-		int16_t head1;
-		int16_t length1;
-		char insid[31];
-		char modify_time[9];
-		int modify_milisec;
-		int16_t head2;
-		int16_t length2;
-		double open_price;
-		double high_price;
-		double low_price;
-		double close_price;
-		double high_limit_price;
-		double low_limit_price;
-		double settle_price;
-		double curr_delta;
-		int16_t head3;
-		int16_t length3;
-		double latest_price;
-		int volume;
-		double turnover;
-		double open_interest;
-		pankou_info pankou[5];
-	};
-#pragma pack()
-};
+
 
 class SpiderMultiFutureDZSession;
 class SpiderMultiFutureDZSpi

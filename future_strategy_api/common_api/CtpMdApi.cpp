@@ -107,7 +107,7 @@ void SpiderCtpMdSpi::OnRspUserLogin(CThostFtdcRspUserLoginField *pRspUserLogin, 
 		LOGI(myAccount.account_id << ", CTP:登陆成功，frontid从"<< myAccount.front_id<<"变更为"<<pRspUserLogin->FrontID<<"，sessionid从"<<myAccount.session_id<<"变更为"<<pRspUserLogin->SessionID);
 		sprintf(myAccount.front_id,"%d", pRspUserLogin->FrontID);
 		sprintf(myAccount.session_id, "%d", pRspUserLogin->SessionID);
-		LOGD("交易所时间打印："<<getNowString()<<", "<<pRspUserLogin->SHFETime << ", " << pRspUserLogin->DCETime << ", " << pRspUserLogin->CZCETime << ", " << pRspUserLogin->FFEXTime << ", " << pRspUserLogin->INETime);
+		LOGD("交易所时间打印："<<pRspUserLogin->SHFETime << ", " << pRspUserLogin->DCETime << ", " << pRspUserLogin->CZCETime << ", " << pRspUserLogin->FFEXTime << ", " << pRspUserLogin->INETime);
 		if (smd)
 		{
 			smd->on_log_in();

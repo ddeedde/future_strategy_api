@@ -149,15 +149,18 @@ void SpiderMultiFutureDZSpi::handle_receive_from(const boost::system::error_code
 		memcpy(&_index, m_data, bytes_recvd);
 		QuotaData * md = new QuotaData();
 		md->ExchangeID = (int)EnumExchangeIDType::CFFEX;
-		md->UpdateMillisec = 0;
+		md->UpdateMillisec = _index.modify_milisec;
 		memcpy(md->TradingDay, getTodayString(), sizeof(md->TradingDay) - 1);
 		memcpy(md->Code, _index.insid, sizeof(md->Code) - 1);
-		memcpy(md->UpdateTime, getNowString(), sizeof(md->UpdateTime) - 1);
-		md->AskPrice1 = spider_swapdouble(_index.pankou[0].ask_price);
-		md->AskVolume1 = spider_swap32(_index.pankou[0].ask_vol);
-		md->BidPrice1 = spider_swapdouble(_index.pankou[0].bid_price);
-		md->BidVolume1 = spider_swap32(_index.pankou[0].bid_vol);
-		md->LastPrice = spider_swapdouble(_index.latest_price);
+		memcpy(md->UpdateTime, _index.modify_time, sizeof(md->UpdateTime) - 1);
+
+		md->AskPrice1 = spider_swapdouble(decrypt_strategy_double_1(_index.pankou[0].ask_price));
+		md->AskVolume1 = spider_swap32(decrypt_strategy_int_1(_index.pankou[0].ask_vol));
+		md->BidPrice1 = spider_swapdouble(decrypt_strategy_double_1(_index.pankou[0].bid_price));
+		md->BidVolume1 = spider_swap32(decrypt_strategy_int_1(_index.pankou[0].bid_vol));
+
+		md->LastPrice = spider_swapdouble(decrypt_strategy_double_1(_index.latest_price));
+
 		md->HighestPrice = spider_swapdouble(_index.high_price);
 		md->LowestPrice = spider_swapdouble(_index.low_price);
 		md->LowerLimitPrice = spider_swapdouble(_index.low_limit_price);
@@ -168,15 +171,15 @@ void SpiderMultiFutureDZSpi::handle_receive_from(const boost::system::error_code
 		md->PreSettlementPrice = 0;
 		md->SettlementPrice = spider_swapdouble(_index.settle_price);
 		md->PreOpenInterest = 0;
-		md->OpenInterest = spider_swapdouble(_index.open_interest);
-		md->Turnover = spider_swapdouble(_index.turnover);
-		md->Volume = spider_swap32(_index.volume);
+		md->OpenInterest = spider_swapdouble(decrypt_strategy_double_1(_index.open_interest));
+		md->Turnover = spider_swapdouble(decrypt_strategy_double_1(_index.turnover));
+		md->Volume = spider_swap32(decrypt_strategy_int_1(_index.volume));
 
 		if (smd)
 		{
 			smd->on_receive_data(md);
 		}
-		LOGD("ees future:" << md->Code << "," << md->LastPrice << "," << md->AskPrice1 << "," << md->BidVolume1 << "," << md->LowestPrice << "," << md->ClosePrice <<  "," << md->UpperLimitPrice << "," << md->Volume << "," << md->Turnover << ":" << _index.modify_time << "-" << _index.modify_milisec); //just for test
+		LOGD("ees future:" << md->Code << "," << md->LastPrice << "," << md->AskPrice1 << "," << md->AskVolume1 << "," << md->BidVolume1 << "," << md->BidPrice1 <<  "," << md->UpperLimitPrice << "," << md->Volume << "," << md->Turnover << "," << _index.modify_time << "," << _index.modify_milisec); //just for test
 
 	}
 
