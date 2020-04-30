@@ -149,7 +149,7 @@ void SpiderMultiFutureDZSpi::handle_receive_from(const boost::system::error_code
 		memcpy(&_index, m_data, bytes_recvd);
 		QuotaData * md = new QuotaData();
 		md->ExchangeID = (int)EnumExchangeIDType::CFFEX;
-		md->UpdateMillisec = _index.modify_milisec;
+		md->UpdateMillisec = spider_swap32(_index.modify_milisec);
 		memcpy(md->TradingDay, getTodayString(), sizeof(md->TradingDay) - 1);
 		memcpy(md->Code, _index.insid, sizeof(md->Code) - 1);
 		memcpy(md->UpdateTime, _index.modify_time, sizeof(md->UpdateTime) - 1);
@@ -179,7 +179,7 @@ void SpiderMultiFutureDZSpi::handle_receive_from(const boost::system::error_code
 		{
 			smd->on_receive_data(md);
 		}
-		LOGD("ees future:" << md->Code << "," << md->LastPrice << "," << md->AskPrice1 << "," << md->AskVolume1 << "," << md->BidVolume1 << "," << md->BidPrice1 <<  "," << md->UpperLimitPrice << "," << md->Volume << "," << md->Turnover << "," << _index.modify_time << "," << _index.modify_milisec); //just for test
+		LOGD("ees future:" << md->Code << "," << md->LastPrice << "," << md->AskPrice1 << "," << md->AskVolume1 << "," << md->BidVolume1 << "," << md->BidPrice1 <<  "," << md->UpperLimitPrice << "," << md->Volume << "," << md->Turnover << "," << _index.modify_time << "," << md->UpdateMillisec); //just for test
 
 	}
 

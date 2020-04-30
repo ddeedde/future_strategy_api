@@ -7,6 +7,7 @@
 #include "EesTdApi.h"
 #include "MultiIndexDZ.h"
 #include "MultiFutureDZ.h"
+#include "TcpFutureCFFEX.h"
 
 SpiderCommonApi::SpiderCommonApi()
 	: market_running(false)
@@ -118,6 +119,11 @@ bool SpiderCommonApi::init(const char * account_id, int account_type )
 			case EnumAccountDetailType::AccountMarketFutureMulticastDZ:
 			{
 				market_session.reset(new SpiderMultiFutureDZSession(this, _ci));
+				return market_session->init();
+			}
+			case EnumAccountDetailType::AccountMarketFutureCFFEXTCP:
+			{
+				market_session.reset(new SpiderTcpFutureCFFEXSession(this, _ci));
 				return market_session->init();
 			}
 			default:

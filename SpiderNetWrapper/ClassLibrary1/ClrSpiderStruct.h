@@ -122,6 +122,7 @@ namespace Spider {
 		Quota(QuotaData *pRspInfo)
 		{
 			this->ExchangeID = (Spider::EnumExchangeIDType)pRspInfo->ExchangeID;
+			this->UpdateMillisec = pRspInfo->UpdateMillisec;
 			this->TradingDay = gcnew String(pRspInfo->TradingDay);
 			this->Code = gcnew String(pRspInfo->Code);
 			this->UpdateTime = gcnew String(pRspInfo->UpdateTime);

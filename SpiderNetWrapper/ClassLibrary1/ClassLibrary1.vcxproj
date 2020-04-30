@@ -112,11 +112,11 @@
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>BOOST_THREAD_DYN_LINK ;NDEBUG;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <AdditionalIncludeDirectories>E:\dev\boost_1_66_0;..\..\future_strategy_api\common_api;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\dev\boost_1_66_0;..\..\future_strategy_api\common_api;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <AdditionalDependencies>future_common_api.lib;</AdditionalDependencies>
-      <AdditionalLibraryDirectories>E:\dev\boost_1_66_0\stage\lib;..\..\future_strategy_api\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>C:\dev\boost_1_66_0\stage\lib;..\..\future_strategy_api\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">

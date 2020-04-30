@@ -96,7 +96,7 @@ struct QuotaData
 	long long Volume;
 };
 
-struct AccountInfo
+struct AccountInfo //该结构体不用在c#的cli中
 {
 	int account_type;
 	char broker_id[12];
@@ -109,6 +109,7 @@ struct AccountInfo
 	char auth_code[32]; //看穿式认证
 	//char local_mac[32]; //本机的mac地址，盛立要求
 	char uri_list[5][128]; //暂时只支持一个账户，最多5个地址
+	char broker_account_id[16]; //真正的柜台的资金账户，上面的account_id，可能只是一个登录子用户
 };
 
 

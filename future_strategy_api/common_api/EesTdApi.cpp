@@ -170,9 +170,9 @@ void SpiderEesTdSpi::stop()
 
 void SpiderEesTdSpi::login()
 {
-	LOGI("EESTradeDataSession ReqUserLogin.UserProductInfo is: " << myAccount.app_id << ", " << myAccount.account_id << ", " << myAccount.auth_code);
+	LOGI("EESTradeDataSession ReqUserLogin.UserProductInfo is: " << smd->get_account().app_id << ", " << smd->get_account().account_id << ", " << smd->get_account().auth_code);
 
-	int r = userApi->UserLogon(myAccount.account_id,myAccount.password,myAccount.app_id,myAccount.auth_code);
+	int r = userApi->UserLogon(smd->get_account().account_id, smd->get_account().password, smd->get_account().app_id, smd->get_account().auth_code);
 	if (r != 0)
 	{
 		LOGW("Warning: EESTradeDataSession encountered an error when try to login, error no: " << r);
@@ -189,7 +189,7 @@ void SpiderEesTdSpi::login()
 ///	\return void  
 void SpiderEesTdSpi::OnConnection(ERR_NO errNo, const char* pErrStr)
 {
-	LOGI(myAccount.account_id << ", EES:连接成功:"<< errNo <<", "<< pErrStr);
+	LOGI(smd->get_account().account_id << ", EES:连接成功:"<< errNo <<", "<< pErrStr);
 	smd->on_connected();
 	login();
 }
@@ -202,7 +202,7 @@ void SpiderEesTdSpi::OnConnection(ERR_NO errNo, const char* pErrStr)
 /// \return void  
 void SpiderEesTdSpi::OnDisConnection(ERR_NO errNo, const char* pErrStr)
 {
-	LOGE(myAccount.account_id << ", EES:连接中断:" << errNo << ", " << pErrStr); //因为盛立接口中没有心跳，所以该回调不靠谱，应该在每个接口调用的返回值中判断是否断连，然后直接重连
+	LOGE(smd->get_account().account_id << ", EES:连接中断:" << errNo << ", " << pErrStr); //因为盛立接口中没有心跳，所以该回调不靠谱，应该在每个接口调用的返回值中判断是否断连，然后直接重连
 	if (isReady)
 	{
 		isReady = false;
@@ -232,10 +232,15 @@ void SpiderEesTdSpi::OnUserLogon(EES_LogonResponse* pLogon)
 		else {
 			isReady = true;
 			LOGI(myAccount.account_id << ", EES:登陆成功，"<< pLogon->m_UserId <<"，最大单号：" << pLogon->m_MaxToken << "，流控参数：" << pLogon->m_OrderFCCount << "," << pLogon->m_OrderFCInterval << "," << pLogon->m_CancelFCCount << "," << pLogon->m_CancelFCInterval);
+			memset(myAccount.account_id, 0, sizeof(myAccount.account_id));
+			sprintf_s(myAccount.account_id, sizeof(myAccount.account_id) - 1, "%d", pLogon->m_UserId); //将account_id转换为user_id
+			LOGI(smd->get_account().account_id << ",转换为："<< myAccount.account_id);
+			userApi->QueryUserAccount(); //有可能结果还没返回，客户就开始查询或下单了
 			if (smd)
 			{
 				smd->init_exoid((int)pLogon->m_MaxToken);
-				smd->on_log_in();
+				//查询真正的资金账户，因为委托，撤单，查询都是用的真正的资金账户ID
+				//smd->on_log_in(); //挪动到查询账户信息返回后再通知
 			}
 		}
 	}
@@ -249,9 +254,29 @@ void SpiderEesTdSpi::OnUserLogon(EES_LogonResponse* pLogon)
 /// \return void 
 void SpiderEesTdSpi::OnQueryUserAccount(EES_AccountInfo * pAccoutnInfo, bool bFinish)
 {
+	//根据userid查询对应的accountid，因为盛立可以对一个资金账户，设置多个子用户（userid），各个用户之间同享所有资金和持仓
 	if (pAccoutnInfo)
 	{
-
+		//例如 66621197 和 6662119701 这两个子账户，它们的m_Account都是66621197，但是他们的m_UserId分别是：206和209。
+		LOGD(myAccount.account_id << ", EES:查询用户账户，"<< pAccoutnInfo->m_Account << "," << pAccoutnInfo->m_InitialBp << "," << pAccoutnInfo->m_AvailableBp << "," << pAccoutnInfo->m_Margin << "," << pAccoutnInfo->m_CommissionFee << "," << bFinish);
+		if (strlen(pAccoutnInfo->m_Account) > 0)
+		{
+			memset(myAccount.broker_account_id, 0, sizeof(myAccount.broker_account_id));
+			memcpy(myAccount.broker_account_id, pAccoutnInfo->m_Account, sizeof(myAccount.broker_account_id) - 1);
+			memset(smd->get_account().broker_account_id, 0, sizeof(smd->get_account().broker_account_id));
+			memcpy(smd->get_account().broker_account_id, pAccoutnInfo->m_Account, sizeof(smd->get_account().broker_account_id) - 1);
+		}
+		if (bFinish)
+		{
+			smd->on_log_in();
+		}
+	}
+	else {
+		LOGE("EES:查询用户账户失败，pAccoutnInfo为空");
+		std::shared_ptr<SpiderErrorMsg> _err(new SpiderErrorMsg());
+		_err->ErrCode = -1;
+		strncpy(_err->ErrMsg, "EES用户账户失败", sizeof(_err->ErrMsg) - 1);
+		smd->on_error(_err);
 	}
 }
 
@@ -326,7 +351,12 @@ void SpiderEesTdSpi::OnOrderAccept(EES_OrderAcceptField* pAccept)
 {
 	if (pAccept)
 	{
-		LOGI(myAccount.account_id << ", EES:柜台确认：" << pAccept->m_ClientOrderToken << "," << pAccept->m_MarketOrderToken << "," << pAccept->m_OrderState);
+		LOGI(myAccount.account_id << ", EES:柜台确认：" << pAccept->m_UserID <<","<< pAccept->m_Account<<"," << pAccept->m_ClientOrderToken << "," << pAccept->m_MarketOrderToken << "," << pAccept->m_OrderState);
+		if (strcmp(myAccount.account_id,std::to_string(pAccept->m_UserID).c_str()) != 0)
+		{
+			LOGW("EES收到非本用户的OrderAccept："<< myAccount.account_id<<","<< pAccept->m_UserID<<","<< pAccept->m_Account);
+			return;
+		}
 		std::shared_ptr<ees_order> _ees_order;
 		if (smd)
 		{
@@ -371,7 +401,12 @@ void SpiderEesTdSpi::OnOrderMarketAccept(EES_OrderMarketAcceptField* pAccept)
 {
 	if (pAccept)
 	{
-		LOGI(myAccount.account_id << ", EES:交易所确认：" << pAccept->m_ClientOrderToken << "," << pAccept->m_MarketOrderToken << "," << pAccept->m_MarketOrderId);
+		LOGI(myAccount.account_id << ", EES:交易所确认：" << pAccept->m_UserID << "," << pAccept->m_Account << "," << pAccept->m_ClientOrderToken << "," << pAccept->m_MarketOrderToken << "," << pAccept->m_MarketOrderId);
+		if (strcmp(myAccount.account_id, std::to_string(pAccept->m_UserID).c_str()) != 0)
+		{
+			LOGW("EES收到非本用户的OrderMarketAccept：" << myAccount.account_id << "," << pAccept->m_UserID << "," << pAccept->m_Account);
+			return;
+		}
 		std::shared_ptr<ees_order> _ees_order;
 		if (smd)
 		{
@@ -415,7 +450,12 @@ void SpiderEesTdSpi::OnOrderReject(EES_OrderRejectField* pReject)
 {
 	if (pReject)
 	{
-		LOGI(myAccount.account_id << ", EES:委托被柜台拒绝：" << pReject->m_ClientOrderToken << "," << pReject->m_ReasonCode << "," << pReject->m_GrammerResult << "," << pReject->m_RiskResult << "," << pReject->m_GrammerText << "," << pReject->m_RiskText);
+		LOGI(myAccount.account_id << ", EES:委托被柜台拒绝：" << pReject->m_Userid <<","<< pReject->m_ClientOrderToken << "," << pReject->m_ReasonCode << "," << pReject->m_GrammerResult << "," << pReject->m_RiskResult << "," << pReject->m_GrammerText << "," << pReject->m_RiskText);
+		if (strcmp(myAccount.account_id, std::to_string(pReject->m_Userid).c_str()) != 0)
+		{
+			LOGW("EES收到非本用户的OrderReject：" << myAccount.account_id << "," << pReject->m_Userid);
+			return;
+		}
 		std::shared_ptr<ees_order> _ees_order;
 		if (smd)
 		{
@@ -453,8 +493,12 @@ void SpiderEesTdSpi::OnOrderMarketReject(EES_OrderMarketRejectField* pReject)
 {
 	if (pReject)
 	{
-		LOGI(myAccount.account_id << ", EES:委托被交易所拒绝：" << pReject->m_ClientOrderToken << "," << pReject->m_MarketOrderToken << "," << pReject->m_ReasonText);
-
+		LOGI(myAccount.account_id << ", EES:委托被交易所拒绝：" << pReject->m_UserID << "," << pReject->m_Account << "," << pReject->m_ClientOrderToken << "," << pReject->m_MarketOrderToken << "," << pReject->m_ReasonText);
+		if (strcmp(myAccount.account_id, std::to_string(pReject->m_UserID).c_str()) != 0)
+		{
+			LOGW("EES收到非本用户的OrderMarketReject：" << myAccount.account_id << "," << pReject->m_UserID << "," << pReject->m_Account);
+			return;
+		}
 		std::shared_ptr<ees_order> _ees_order;
 		if (smd)
 		{
@@ -492,7 +536,12 @@ void SpiderEesTdSpi::OnOrderExecution(EES_OrderExecutionField* pExec)
 {
 	if (pExec)
 	{
-		LOGI(myAccount.account_id << ", EES:成交回报：" << pExec->m_ClientOrderToken<< "," << pExec->m_MarketOrderToken << "," << pExec->m_Quantity << "," << pExec->m_Price << "," << pExec->m_ExecutionID << "," << pExec->m_MarketExecID);
+		LOGI(myAccount.account_id << ", EES:成交回报：" << pExec->m_Userid <<","<< pExec->m_ClientOrderToken<< "," << pExec->m_MarketOrderToken << "," << pExec->m_Quantity << "," << pExec->m_Price << "," << pExec->m_ExecutionID << "," << pExec->m_MarketExecID);
+		if (strcmp(myAccount.account_id, std::to_string(pExec->m_Userid).c_str()) != 0)
+		{
+			LOGW("EES收到非本用户的OrderExecution：" << myAccount.account_id << "," << pExec->m_Userid);
+			return;
+		}
 		std::shared_ptr<ees_order> _ees_order;
 		if (smd)
 		{
@@ -552,7 +601,12 @@ void SpiderEesTdSpi::OnOrderCxled(EES_OrderCxled* pCxled)
 {
 	if (pCxled)
 	{
-		LOGI(myAccount.account_id << ", EES:撤单成功："<< pCxled->m_ClientOrderToken<<","<< pCxled->m_MarketOrderToken<<","<< pCxled->m_Reason);
+		LOGI(myAccount.account_id << ", EES:撤单成功："<< pCxled->m_Userid <<","<< pCxled->m_ClientOrderToken<<","<< pCxled->m_MarketOrderToken<<","<< pCxled->m_Reason);
+		if (strcmp(myAccount.account_id, std::to_string(pCxled->m_Userid).c_str()) != 0)
+		{
+			LOGW("EES收到非本用户的OrderCxled：" << myAccount.account_id << "," << pCxled->m_Userid);
+			return;
+		}
 		std::shared_ptr<ees_order> _ees_order;
 		if (smd)
 		{
@@ -607,7 +661,12 @@ void SpiderEesTdSpi::OnCxlOrderReject(EES_CxlOrderRej* pReject)
 {
 	if (pReject)
 	{
-		LOGI(myAccount.account_id << ", EES:撤单失败：" << pReject->m_ClientOrderToken << "," << pReject->m_MarketOrderToken << "," << pReject->m_ReasonCode << "," << pReject->m_ReasonText);
+		LOGI(myAccount.account_id << ", EES:撤单失败："<< pReject->m_UserID<<"," << pReject->m_ClientOrderToken << "," << pReject->m_MarketOrderToken << "," << pReject->m_ReasonCode << "," << pReject->m_ReasonText);
+		if (strcmp(myAccount.account_id, std::to_string(pReject->m_UserID).c_str()) != 0)
+		{
+			LOGW("EES收到非本用户的CxlOrderReject：" << myAccount.account_id << "," << pReject->m_UserID);
+			return;
+		}
 		std::shared_ptr<ees_order> _ees_order;
 		if (smd)
 		{
@@ -646,6 +705,15 @@ void SpiderEesTdSpi::OnQueryTradeOrder(const char* pAccount, EES_QueryAccountOrd
 {
 	if (pQueryOrder)
 	{
+		if (strcmp(myAccount.account_id, std::to_string(pQueryOrder->m_Userid).c_str()) != 0)
+		{
+			LOGW("EES收到非本用户的QueryTradeOrder：" << myAccount.account_id << "," << pQueryOrder->m_Userid);
+			if (bFinish)
+			{
+				smd->on_rsp_query_order(NULL, 88, bFinish);
+			}
+			return;
+		}
 		OrderInfo * order = new OrderInfo;
 		memset(order, 0, sizeof(OrderInfo));
 		strncpy(order->Code, pQueryOrder->m_symbol, sizeof(order->Code) - 1);
@@ -679,6 +747,15 @@ void SpiderEesTdSpi::OnQueryTradeOrderExec(const char* pAccount, EES_QueryOrderE
 {
 	if (pQueryOrderExec)
 	{
+		if (strcmp(myAccount.account_id, std::to_string(pQueryOrderExec->m_Userid).c_str()) != 0)
+		{
+			LOGW("EES收到非本用户的QueryTradeOrderExec：" << myAccount.account_id << "," << pQueryOrderExec->m_Userid);
+			if (bFinish)
+			{
+				smd->on_rsp_query_trade(NULL, 88, bFinish);
+			}
+			return;
+		}
 		std::shared_ptr<ees_order> _ees_order;
 		if (smd)
 		{
@@ -752,10 +829,35 @@ const char * SpiderEesTdSession::insert_order(OrderInsert * order)
 	sprintf_s(_order_ref, 13, "%d", field.m_ClientOrderToken);
 	//delete[] _order_ref; //要在使用的地方删除掉,api使用者自己释放
 
+	if (strlen(get_account().broker_account_id) <= 0)
+	{
+		LOGW("Warning: EES EnterOrder, 未获得真实资金账户");
+		std::shared_ptr<SpiderErrorMsg> _err(new SpiderErrorMsg());
+		_err->ErrCode = -1;
+		strncpy(_err->ErrMsg, "未获得真实资金账户", sizeof(_err->ErrMsg) - 1);
+		on_error(_err);
+
+		OrderInfo * failorder = new OrderInfo();
+		memset(failorder, 0, sizeof(OrderInfo));
+		strncpy(failorder->Code, order->Code, sizeof(failorder->Code) - 1);
+		strncpy(failorder->OrderRef, _order_ref, sizeof(failorder->OrderRef) - 1);
+		failorder->ExchangeID = order->ExchangeID;
+		failorder->Direction = order->Direction;
+		failorder->Offset = order->Offset;
+		failorder->HedgeFlag = order->HedgeFlag;
+		failorder->LimitPrice = order->LimitPrice;
+		failorder->VolumeTotalOriginal = order->VolumeTotalOriginal;
+		failorder->OrderStatus = -1; //约定好的失败
+		strncpy(failorder->StatusMsg, "未获得真实资金账户", sizeof(failorder->StatusMsg) - 1);
+		tradeConnection->add_task(async_task(async_task_send_order_fail, failorder));
+
+		return _order_ref;
+	}
+
 	field.m_Tif = EES_OrderTif_Day;
 	field.m_HedgeFlag = EES_HedgeFlag_Speculation;
 
-	strncpy(field.m_Account, get_account().account_id,sizeof(field.m_Account) - 1);
+	strncpy(field.m_Account, get_account().broker_account_id,sizeof(field.m_Account) - 1);
 	strncpy(field.m_Symbol, order->Code, sizeof(field.m_Symbol) - 1);
 
 	switch (order->Offset)
@@ -814,7 +916,7 @@ const char * SpiderEesTdSession::insert_order(OrderInsert * order)
 
 	if (!tradeConnection->ready())
 	{
-		LOGW("Warning: EES EnterOrder, 盛立服务器尚未登录");
+		LOGW("EES EnterOrder, 盛立服务器尚未登录");
 		std::shared_ptr<SpiderErrorMsg> _err(new SpiderErrorMsg());
 		_err->ErrCode = -1;
 		strncpy(_err->ErrMsg, "盛立服务器尚未登录", sizeof(_err->ErrMsg) - 1);
@@ -853,7 +955,7 @@ const char * SpiderEesTdSession::insert_order(OrderInsert * order)
 	int r = tradeConnection->getUserApi()->EnterOrder(&field);
 	if (r != 0)
 	{
-		LOGW("Warning: EES EnterOrder, error no: " << r);
+		LOGW("EES EnterOrder, error no: " << r);
 		std::shared_ptr<SpiderErrorMsg> _err(new SpiderErrorMsg());
 		_err->ErrCode = r;
 		strncpy(_err->ErrMsg, "EnterOrder调用失败", sizeof(_err->ErrMsg) - 1);
@@ -882,22 +984,25 @@ const char * SpiderEesTdSession::insert_order(OrderInsert * order)
 			tradeConnection->add_task(async_task(async_task_login, NULL));
 		}
 	}
-
+	LOGI("EES EnterOrder: " << _order_ref);
 	return _order_ref;
 }
 
 void SpiderEesTdSession::cancel_order(OrderCancel * order)
 {
-
-	EES_CancelOrder action;
-	memset(&action, 0, sizeof(action));
-	strncpy(action.m_Account, get_account().account_id, sizeof(action.m_Account) - 1);
-	action.m_MarketOrderToken = atoll(order->OrderSysID);
-	LOGD(get_account().account_id << ":EES Withdraw: " << action.m_MarketOrderToken);
+	if (strlen(get_account().broker_account_id) <= 0)
+	{
+		LOGW("EES Withdraw, 未获得真实资金账户");
+		std::shared_ptr<SpiderErrorMsg> _err(new SpiderErrorMsg());
+		_err->ErrCode = -1;
+		strncpy(_err->ErrMsg, "未获得真实资金账户", sizeof(_err->ErrMsg) - 1);
+		on_error(_err);
+		return;
+	}
 
 	if (!tradeConnection->ready())
 	{
-		LOGW("Warning: EES EnterOrder, 盛立服务器尚未登录");
+		LOGW("EES Withdraw, 盛立服务器尚未登录");
 		std::shared_ptr<SpiderErrorMsg> _err(new SpiderErrorMsg());
 		_err->ErrCode = -1;
 		strncpy(_err->ErrMsg, "盛立服务器尚未登录", sizeof(_err->ErrMsg) - 1);
@@ -905,10 +1010,16 @@ void SpiderEesTdSession::cancel_order(OrderCancel * order)
 		return;
 	}
 
+	EES_CancelOrder action;
+	memset(&action, 0, sizeof(action));
+	strncpy(action.m_Account, get_account().broker_account_id, sizeof(action.m_Account) - 1);
+	action.m_MarketOrderToken = atoll(order->OrderSysID);
+	LOGD(get_account().account_id << ":EES Withdraw: " << action.m_MarketOrderToken);
+
 	int r = tradeConnection->getUserApi()->CancelOrder(&action);
 	if (r != 0)
 	{
-		LOGW("Warning: EES CancelOrder, error no: " << r);
+		LOGW("EES CancelOrder, error no: " << r);
 		std::shared_ptr<SpiderErrorMsg> _err(new SpiderErrorMsg());
 		_err->ErrCode = r;
 		strncpy(_err->ErrMsg, "CancelOrder调用失败", sizeof(_err->ErrMsg) - 1);
@@ -927,9 +1038,19 @@ void SpiderEesTdSession::cancel_order(OrderCancel * order)
 
 void SpiderEesTdSession::query_trading_account(int request_id)
 {
+	if (strlen(get_account().broker_account_id) <= 0)
+	{
+		LOGW("EES QueryAccountBP, 未获得真实资金账户");
+		std::shared_ptr<SpiderErrorMsg> _err(new SpiderErrorMsg());
+		_err->ErrCode = -1;
+		strncpy(_err->ErrMsg, "未获得真实资金账户", sizeof(_err->ErrMsg) - 1);
+		on_error(_err);
+		return;
+	}
+
 	if (!tradeConnection->ready())
 	{
-		LOGW("Warning: EES EnterOrder, 盛立服务器尚未登录");
+		LOGW("EES QueryAccountBP, 盛立服务器尚未登录");
 		std::shared_ptr<SpiderErrorMsg> _err(new SpiderErrorMsg());
 		_err->ErrCode = -1;
 		strncpy(_err->ErrMsg, "盛立服务器尚未登录", sizeof(_err->ErrMsg) - 1);
@@ -943,7 +1064,7 @@ void SpiderEesTdSession::query_trading_account(int request_id)
 		if (it != cache_account_info.end())
 		{
 			//还有记录时，说明上一次查询没有完成，不允许查询
-			LOGW(get_account().account_id << " Warning: CTP 上一次查询账户资金尚未完成，请稍后再试");
+			LOGW(get_account().account_id << " EES 上一次查询账户资金尚未完成，请稍后再试");
 			std::shared_ptr<SpiderErrorMsg> _err(new SpiderErrorMsg());
 			_err->ErrCode = -1;
 			strncpy(_err->ErrMsg, "上一次查询账户资金尚未完成，请稍后再试", sizeof(_err->ErrMsg) - 1);
@@ -952,11 +1073,11 @@ void SpiderEesTdSession::query_trading_account(int request_id)
 		}
 	}
 
-	LOGI(get_account().account_id << ":EES query clients trading_account, requestid:" << request_id);
-	int result = tradeConnection->getUserApi()->QueryAccountBP(get_account().account_id, request_id);
+	LOGI(get_account().account_id <<","<< get_account().broker_account_id << ":EES query clients trading_account, requestid:" << request_id);
+	int result = tradeConnection->getUserApi()->QueryAccountBP(get_account().broker_account_id, request_id);
 	if (result != 0)
 	{
-		LOGW(get_account().account_id << ":Warning: EES failed to query trading_account, error:" << result);
+		LOGW(get_account().account_id << ": EES failed to query trading_account, error:" << result);
 		std::shared_ptr<SpiderErrorMsg> _err(new SpiderErrorMsg());
 		_err->ErrCode = result;
 		strncpy(_err->ErrMsg, "QueryAccountBP调用失败", sizeof(_err->ErrMsg) - 1);
@@ -975,9 +1096,19 @@ void SpiderEesTdSession::query_trading_account(int request_id)
 }
 void SpiderEesTdSession::query_positions(int request_id)
 {
+	if (strlen(get_account().broker_account_id) <= 0)
+	{
+		LOGW("EES QueryAccountPosition, 未获得真实资金账户");
+		std::shared_ptr<SpiderErrorMsg> _err(new SpiderErrorMsg());
+		_err->ErrCode = -1;
+		strncpy(_err->ErrMsg, "未获得真实资金账户", sizeof(_err->ErrMsg) - 1);
+		on_error(_err);
+		return;
+	}
+
 	if (!tradeConnection->ready())
 	{
-		LOGW("Warning: EES EnterOrder, 盛立服务器尚未登录");
+		LOGW("EES QueryAccountPosition, 盛立服务器尚未登录");
 		std::shared_ptr<SpiderErrorMsg> _err(new SpiderErrorMsg());
 		_err->ErrCode = -1;
 		strncpy(_err->ErrMsg, "盛立服务器尚未登录", sizeof(_err->ErrMsg) - 1);
@@ -991,7 +1122,7 @@ void SpiderEesTdSession::query_positions(int request_id)
 		if (it != cache_positions_info.end())
 		{
 			//还有记录时，说明上一次查询没有完成，不允许查询
-			LOGW(get_account().account_id << " Warning: CTP 上一次查询账户持仓尚未完成，请稍后再试");
+			LOGW(get_account().account_id << " EES 上一次查询账户持仓尚未完成，请稍后再试");
 			std::shared_ptr<SpiderErrorMsg> _err(new SpiderErrorMsg());
 			_err->ErrCode = -1;
 			strncpy(_err->ErrMsg, "上一次查询账户持仓尚未完成，请稍后再试", sizeof(_err->ErrMsg) - 1);
@@ -1001,7 +1132,7 @@ void SpiderEesTdSession::query_positions(int request_id)
 	}
 
 	LOGI(get_account().account_id << ":EES query clients positions, requestid:" << request_id);
-	int result = tradeConnection->getUserApi()->QueryAccountPosition(get_account().account_id, request_id);
+	int result = tradeConnection->getUserApi()->QueryAccountPosition(get_account().broker_account_id, request_id);
 	if (result != 0)
 	{
 		LOGW(get_account().account_id << ":Warning: EES failed to query position, error:" << result);
@@ -1022,9 +1153,19 @@ void SpiderEesTdSession::query_positions(int request_id)
 }
 void SpiderEesTdSession::query_orders(int request_id)
 {
+	if (strlen(get_account().broker_account_id) <= 0)
+	{
+		LOGW("EES QueryAccountOrder, 未获得真实资金账户");
+		std::shared_ptr<SpiderErrorMsg> _err(new SpiderErrorMsg());
+		_err->ErrCode = -1;
+		strncpy(_err->ErrMsg, "未获得真实资金账户", sizeof(_err->ErrMsg) - 1);
+		on_error(_err);
+		return;
+	}
+
 	if (!tradeConnection->ready())
 	{
-		LOGW("Warning: EES EnterOrder, 盛立服务器尚未登录");
+		LOGW("EES QueryAccountOrder, 盛立服务器尚未登录");
 		std::shared_ptr<SpiderErrorMsg> _err(new SpiderErrorMsg());
 		_err->ErrCode = -1;
 		strncpy(_err->ErrMsg, "盛立服务器尚未登录", sizeof(_err->ErrMsg) - 1);
@@ -1039,7 +1180,7 @@ void SpiderEesTdSession::query_orders(int request_id)
 		if (it != cache_orders_info.end())
 		{
 			//还有记录时，说明上一次查询没有完成，不允许查询
-			LOGW(get_account().account_id << " Warning: CTP 上一次查询账户委托尚未完成，请稍后再试");
+			LOGW(get_account().account_id << " EES 上一次查询账户委托尚未完成，请稍后再试");
 			std::shared_ptr<SpiderErrorMsg> _err(new SpiderErrorMsg());
 			_err->ErrCode = -1;
 			strncpy(_err->ErrMsg, "上一次查询账户委托尚未完成，请稍后再试", sizeof(_err->ErrMsg) - 1);
@@ -1049,10 +1190,10 @@ void SpiderEesTdSession::query_orders(int request_id)
 	}
 
 	LOGI(get_account().account_id << ":EES query clients orders, requestid:" << request_id);
-	int result = tradeConnection->getUserApi()->QueryAccountOrder(get_account().account_id);
+	int result = tradeConnection->getUserApi()->QueryAccountOrder(get_account().broker_account_id);
 	if (result != 0)
 	{
-		LOGW(get_account().account_id << ":Warning: EES failed to query orders, error:" << result);
+		LOGW(get_account().account_id << ":EES failed to query orders, error:" << result);
 		std::shared_ptr<SpiderErrorMsg> _err(new SpiderErrorMsg());
 		_err->ErrCode = result;
 		strncpy(_err->ErrMsg, "QueryAccountOrder调用失败", sizeof(_err->ErrMsg) - 1);
@@ -1070,9 +1211,19 @@ void SpiderEesTdSession::query_orders(int request_id)
 }
 void SpiderEesTdSession::query_trades(int request_id)
 {
+	if (strlen(get_account().broker_account_id) <= 0)
+	{
+		LOGW("EES QueryAccountOrderExecution, 未获得真实资金账户");
+		std::shared_ptr<SpiderErrorMsg> _err(new SpiderErrorMsg());
+		_err->ErrCode = -1;
+		strncpy(_err->ErrMsg, "未获得真实资金账户", sizeof(_err->ErrMsg) - 1);
+		on_error(_err);
+		return;
+	}
+
 	if (!tradeConnection->ready())
 	{
-		LOGW("Warning: EES EnterOrder, 盛立服务器尚未登录");
+		LOGW("EES QueryAccountOrderExecution, 盛立服务器尚未登录");
 		std::shared_ptr<SpiderErrorMsg> _err(new SpiderErrorMsg());
 		_err->ErrCode = -1;
 		strncpy(_err->ErrMsg, "盛立服务器尚未登录", sizeof(_err->ErrMsg) - 1);
@@ -1087,7 +1238,7 @@ void SpiderEesTdSession::query_trades(int request_id)
 		if (it != cache_trades_info.end())
 		{
 			//还有记录时，说明上一次查询没有完成，不允许查询
-			LOGW(get_account().account_id << " Warning: CTP 上一次查询账户成交尚未完成，请稍后再试");
+			LOGW(get_account().account_id << " EES 上一次查询账户成交尚未完成，请稍后再试");
 			std::shared_ptr<SpiderErrorMsg> _err(new SpiderErrorMsg());
 			_err->ErrCode = -1;
 			strncpy(_err->ErrMsg, "上一次查询账户成交尚未完成，请稍后再试", sizeof(_err->ErrMsg) - 1);
@@ -1097,10 +1248,10 @@ void SpiderEesTdSession::query_trades(int request_id)
 	}
 
 	LOGI(get_account().account_id << ":EES query clients trades, requestid:" << request_id);
-	int result = tradeConnection->getUserApi()->QueryAccountOrderExecution(get_account().account_id);
+	int result = tradeConnection->getUserApi()->QueryAccountOrderExecution(get_account().broker_account_id);
 	if (result != 0)
 	{
-		LOGW(get_account().account_id << ":Warning: EES failed to query trades, error:" << result);
+		LOGW(get_account().account_id << ":EES failed to query trades, error:" << result);
 		std::shared_ptr<SpiderErrorMsg> _err(new SpiderErrorMsg());
 		_err->ErrCode = result;
 		strncpy(_err->ErrMsg, "QueryAccountOrderExecution调用失败", sizeof(_err->ErrMsg) - 1);
@@ -1363,27 +1514,33 @@ void SpiderEesTdSession::on_rsp_query_trade(TradeInfo * trade, int request_id, b
 	int send_count = 0;
 	{
 		std::unique_lock<std::mutex> l(cache_mutex);
-		auto it = cache_trades_info.find(request_id);
-		if (it != cache_trades_info.end())
+		if (trade) //入参trade可能是NULL
 		{
-			it->second.push_back(trade);
-		}
-		else {
-			std::vector<TradeInfo* > tmp;
-			tmp.push_back(trade);
-			cache_trades_info.insert(std::make_pair(request_id, tmp));
+			auto it = cache_trades_info.find(request_id);
+			if (it != cache_trades_info.end())
+			{
+				it->second.push_back(trade);
+			}
+			else {
+				std::vector<TradeInfo* > tmp;
+				tmp.push_back(trade);
+				cache_trades_info.insert(std::make_pair(request_id, tmp));
+			}
 		}
 		if (last)
 		{
 			auto sendit = cache_trades_info.find(request_id);
-			std::vector<TradeInfo* >& _vec = sendit->second;
-			send_count = (int)_vec.size();
-			send_list = new TradeInfo *[send_count];
-			for (int i = 0; i < send_count; ++i)
+			if (sendit != cache_trades_info.end()) //cache_trades_info 可能找不到记录
 			{
-				send_list[i] = _vec[i];
+				std::vector<TradeInfo* >& _vec = sendit->second;
+				send_count = (int)_vec.size();
+				send_list = new TradeInfo *[send_count];
+				for (int i = 0; i < send_count; ++i)
+				{
+					send_list[i] = _vec[i];
+				}
+				cache_trades_info.erase(sendit);
 			}
-			cache_trades_info.erase(sendit);
 		}
 	}
 	if (spider_common_api != NULL)
@@ -1408,27 +1565,34 @@ void SpiderEesTdSession::on_rsp_query_order(OrderInfo * order, int request_id, b
 	int send_count = 0;
 	{
 		std::unique_lock<std::mutex> l(cache_mutex);
-		auto it = cache_orders_info.find(request_id);
-		if (it != cache_orders_info.end())
+		if (order) //入参order可能是NULL
 		{
-			it->second.push_back(order);
+			auto it = cache_orders_info.find(request_id);
+			if (it != cache_orders_info.end())
+			{
+				it->second.push_back(order);
+			}
+			else {
+				std::vector<OrderInfo* > tmp;
+				tmp.push_back(order);
+				cache_orders_info.insert(std::make_pair(request_id, tmp));
+			}
 		}
-		else {
-			std::vector<OrderInfo* > tmp;
-			tmp.push_back(order);
-			cache_orders_info.insert(std::make_pair(request_id, tmp));
-		}
+
 		if (last)
 		{
 			auto sendit = cache_orders_info.find(request_id);
-			std::vector<OrderInfo* >& _vec = sendit->second;
-			send_count = (int)_vec.size();
-			send_list = new OrderInfo *[send_count];
-			for (int i = 0; i < send_count; ++i)
+			if (sendit != cache_orders_info.end()) //cache_orders_info 可能找不到记录
 			{
-				send_list[i] = _vec[i];
+				std::vector<OrderInfo* >& _vec = sendit->second;
+				send_count = (int)_vec.size();
+				send_list = new OrderInfo *[send_count];
+				for (int i = 0; i < send_count; ++i)
+				{
+					send_list[i] = _vec[i];
+				}
+				cache_orders_info.erase(sendit);
 			}
-			cache_orders_info.erase(sendit);
 		}
 	}
 	if (spider_common_api != NULL)
