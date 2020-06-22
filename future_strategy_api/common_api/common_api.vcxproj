@@ -150,6 +150,7 @@
     <ClInclude Include="MdApi.h" />
     <ClInclude Include="MultiIndexApi.h" />
     <ClInclude Include="TdApi.h" />
+    <ClInclude Include="UdpFutureSelf.h" />
     <ClInclude Include="Utility.h" />
   </ItemGroup>
   <ItemGroup>
@@ -168,6 +169,7 @@
     <ClCompile Include="CtpMdApi.cpp" />
     <ClCompile Include="FutureApi.cpp" />
     <ClCompile Include="MultiIndexApi.cpp" />
+    <ClCompile Include="UdpFutureSelf.cpp" />
     <ClCompile Include="Utility.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

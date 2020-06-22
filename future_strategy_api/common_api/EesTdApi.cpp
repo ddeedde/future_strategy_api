@@ -351,7 +351,7 @@ void SpiderEesTdSpi::OnOrderAccept(EES_OrderAcceptField* pAccept)
 {
 	if (pAccept)
 	{
-		LOGI(myAccount.account_id << ", EES:柜台确认：" << pAccept->m_UserID <<","<< pAccept->m_Account<<"," << pAccept->m_ClientOrderToken << "," << pAccept->m_MarketOrderToken << "," << pAccept->m_OrderState);
+		LOGI(myAccount.account_id << ", EES:柜台确认：" << pAccept->m_UserID <<","<< pAccept->m_Account<<"," << pAccept->m_ClientOrderToken << "," << pAccept->m_MarketOrderToken << "," << smd->get_the_time(pAccept->m_AcceptTime) << "," << pAccept->m_Symbol << "," << pAccept->m_MarketSessionId);
 		if (strcmp(myAccount.account_id,std::to_string(pAccept->m_UserID).c_str()) != 0)
 		{
 			LOGW("EES收到非本用户的OrderAccept："<< myAccount.account_id<<","<< pAccept->m_UserID<<","<< pAccept->m_Account);
@@ -401,7 +401,7 @@ void SpiderEesTdSpi::OnOrderMarketAccept(EES_OrderMarketAcceptField* pAccept)
 {
 	if (pAccept)
 	{
-		LOGI(myAccount.account_id << ", EES:交易所确认：" << pAccept->m_UserID << "," << pAccept->m_Account << "," << pAccept->m_ClientOrderToken << "," << pAccept->m_MarketOrderToken << "," << pAccept->m_MarketOrderId);
+		LOGI(myAccount.account_id << ", EES:交易所确认：" << pAccept->m_UserID << "," << pAccept->m_Account << "," << pAccept->m_ClientOrderToken << "," << pAccept->m_MarketOrderToken << "," << pAccept->m_MarketOrderId << "," << smd->get_the_time(pAccept->m_MarketTime) );
 		if (strcmp(myAccount.account_id, std::to_string(pAccept->m_UserID).c_str()) != 0)
 		{
 			LOGW("EES收到非本用户的OrderMarketAccept：" << myAccount.account_id << "," << pAccept->m_UserID << "," << pAccept->m_Account);

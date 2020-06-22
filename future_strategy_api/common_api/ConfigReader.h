@@ -15,6 +15,7 @@ enum EnumAccountDetailType
 	AccountMarketFutureEES = 202,
 	AccountMarketFutureMulticastDZ = 203, //东证期货提供的中金Level2期货组播行情
 	AccountMarketFutureCFFEXTCP = 204, //中信期货提供的中金Level2期货tcp行情接口
+	AccountMarketFutureCFFEXUDP = 205, //我们自己的udp期货行情格式
 	AccountMarketIndexMulticast = 301,
 	AccountMarketIndexMulticastDZ = 302, //东证期货提供的指数组播行情
 };
