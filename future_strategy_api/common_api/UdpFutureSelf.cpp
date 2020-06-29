@@ -81,12 +81,6 @@ void SpiderUdpFutureSpi::start()
 
 	io.post(boost::bind(&SpiderUdpFutureSpi::on_start, this));
 
-	//开始收数据
-	async_receive();
-
-	//开始心跳，如果长时间没有心跳，服务端会断开连接
-	ping();
-
 }
 
 void SpiderUdpFutureSpi::ping()
@@ -112,6 +106,10 @@ void SpiderUdpFutureSpi::on_start()
 		smd->on_connected();
 		smd->on_log_in();
 	}
+	//开始心跳，如果长时间没有心跳，服务端会断开连接
+	ping();
+
+	//开始收数据
 	async_receive();
 }
 
@@ -145,7 +143,7 @@ void SpiderUdpFutureSpi::handle_receive_from(const boost::system::error_code& er
 	{
 		if (bytes_recvd == sizeof(MarketDataFuture))
 		{
-			if (recv_count++ % 2000 == 0)
+			if (recv_count++ % 5000 == 0)
 			{
 				LOGD("SpiderUdpFutureSpi received: " << recv_count);
 			}
@@ -184,7 +182,7 @@ void SpiderUdpFutureSpi::handle_receive_from(const boost::system::error_code& er
 			{
 				smd->on_receive_data(md);
 			}
-			LOGD("my udp future:" << md->Code << "," << md->AskPrice1 << "," << md->AskVolume1 << "," << md->BidPrice1 << "," << md->BidVolume1 << "," << md->LastPrice << "," << md->Turnover << "," << md->Volume); //just for test
+			LOGD("my udp future:" << md->Code << "," << md->AskPrice1 << "," << md->AskVolume1 << "," << md->BidPrice1 << "," << md->BidVolume1 << "," << md->LastPrice << "," << md->Turnover << "," << md->Volume << "," << md->UpdateTime); //just for test
 		}
 	}
 	else {
