@@ -145,20 +145,21 @@ void SpiderUdpFutureSpi::handle_receive_from(const boost::system::error_code& er
 		{
 			if (recv_count++ % 5000 == 0)
 			{
-				LOGD("SpiderUdpFutureSpi received: " << recv_count);
+				LOGI("SpiderUdpFutureSpi received: " << recv_count);
 			}
 			MarketDataFuture * _index = (MarketDataFuture*)m_data;
 
-			QuotaData * md = new QuotaData();
-			md->ExchangeID = (int)EnumExchangeIDType::CFFEX;
-			md->UpdateMillisec = get_not_microsec();
-			memcpy(md->TradingDay, getTodayString(), sizeof(md->TradingDay) - 1);
-			memcpy(md->Code, _index->SecID, sizeof(md->Code) - 1);
 			int _hour = _index->Time / 10000000;
 			int _minite = _index->Time / 100000 - _hour * 100;
 			int _second = (_index->Time / 1000) % 100;
-			sprintf_s(md->UpdateTime, sizeof(md->UpdateTime) - 1, "%.2d:%.2d:%.2d", _hour, _minite, _second); //维持 09:30:00 这样的格式
+			int _milisec = _index->Time % 1000;
 
+			QuotaData * md = new QuotaData();
+			md->ExchangeID = (int)EnumExchangeIDType::CFFEX;
+			md->UpdateMillisec = _milisec; // get_not_microsec();
+			memcpy(md->TradingDay, getTodayString(), sizeof(md->TradingDay) - 1);
+			memcpy(md->Code, _index->SecID, sizeof(md->Code) - 1);
+			sprintf_s(md->UpdateTime, sizeof(md->UpdateTime) - 1, "%.2d:%.2d:%.2d", _hour, _minite, _second); //维持 09:30:00 这样的格式
 			md->AskPrice1 = (double)_index->AskPrice / 10000;
 			md->AskVolume1 = _index->AskVol;
 			md->BidPrice1 = (double)_index->BidPrice / 10000;
@@ -182,7 +183,7 @@ void SpiderUdpFutureSpi::handle_receive_from(const boost::system::error_code& er
 			{
 				smd->on_receive_data(md);
 			}
-			LOGD("my udp future:" << md->Code << "," << md->AskPrice1 << "," << md->AskVolume1 << "," << md->BidPrice1 << "," << md->BidVolume1 << "," << md->LastPrice << "," << md->Turnover << "," << md->Volume << "," << md->UpdateTime); //just for test
+			LOGD("my udp future:" << md->Code << "," << md->AskPrice1 << "," << md->AskVolume1 << "," << md->BidPrice1 << "," << md->BidVolume1 << "," << md->LastPrice << "," << md->Turnover << "," << md->Volume << "," << md->UpdateTime << "," << md->UpdateMillisec); //just for test
 		}
 	}
 	else {

@@ -149,7 +149,7 @@ void SpiderTcpFutureCFFEXSpi::OnRspUserLogin(CUstpFtdcRspUserLoginField *pRspUse
 	if (pRspUserLogin != NULL)
 	{
 		LOGI(myAccount.account_id << ", CFFEXSpi:登陆成功，交易日" << pRspUserLogin->TradingDay << "，" << pRspUserLogin->BrokerID << "，" << pRspUserLogin->UserID);
-		LOGD("登录时间：" << pRspUserLogin->LoginTime << ", " << pRspUserLogin->TradingSystemName << ", " << pRspUserLogin->DataCenterID << ", " << pRspUserLogin->PrivateFlowSize << ", " << pRspUserLogin->UserFlowSize);
+		LOGI("登录时间：" << pRspUserLogin->LoginTime << ", " << pRspUserLogin->TradingSystemName << ", " << pRspUserLogin->DataCenterID << ", " << pRspUserLogin->PrivateFlowSize << ", " << pRspUserLogin->UserFlowSize);
 		if (smd)
 		{
 			smd->on_log_in();
@@ -214,9 +214,9 @@ void SpiderTcpFutureCFFEXSpi::OnRtnDepthMarketData(CUstpFtdcDepthMarketDataField
 {
 	if (pMarketData != NULL)
 	{
-		if (++recv_count % 1000 == 0)
+		if (++recv_count % 5000 == 0)
 		{
-			LOGD("FutureCFFEXSpi received: " << recv_count);
+			LOGI("FutureCFFEXSpi received: " << recv_count);
 		}
 		QuotaData * md = new QuotaData();
 		md->ExchangeID = (int)EnumExchangeIDType::CFFEX;

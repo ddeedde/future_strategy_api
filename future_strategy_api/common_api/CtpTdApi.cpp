@@ -148,7 +148,7 @@ void SpiderCtpTdSpi::OnRspUserLogin(CThostFtdcRspUserLoginField *pRspUserLogin, 
 		sprintf(myAccount.front_id, "%d", pRspUserLogin->FrontID);
 		sprintf(myAccount.session_id, "%d", pRspUserLogin->SessionID);
 		//int _exoid = atoi(pRspUserLogin->MaxOrderRef);
-		LOGD("交易所时间打印：" << pRspUserLogin->SHFETime << ", " << pRspUserLogin->DCETime << ", " << pRspUserLogin->CZCETime << ", " << pRspUserLogin->FFEXTime << ", " << pRspUserLogin->INETime);
+		LOGI("交易所时间打印：" << pRspUserLogin->SHFETime << ", " << pRspUserLogin->DCETime << ", " << pRspUserLogin->CZCETime << ", " << pRspUserLogin->FFEXTime << ", " << pRspUserLogin->INETime);
 		
 		//确认结算单
 		CThostFtdcSettlementInfoConfirmField field;
@@ -446,7 +446,7 @@ void SpiderCtpTdSpi::OnRspQryOrder(CThostFtdcOrderField *pOrder, CThostFtdcRspIn
 	}
 	if (pOrder != NULL)
 	{
-		LOGD(myAccount.account_id << ", CTP:OnRspQryOrder: " << pOrder->InstrumentID << ":" << bIsLast);
+		LOGI(myAccount.account_id << ", CTP:OnRspQryOrder: " << pOrder->InstrumentID << ":" << bIsLast);
 		OrderInfo * order = new OrderInfo;
 		memset(order, 0, sizeof(OrderInfo));
 		strncpy(order->Code, pOrder->InstrumentID, sizeof(order->Code) - 1);
@@ -486,7 +486,7 @@ void SpiderCtpTdSpi::OnRspQryTrade(CThostFtdcTradeField *pTrade, CThostFtdcRspIn
 	}
 	if (pTrade != NULL)
 	{
-		LOGD(myAccount.account_id << ", CTP:OnRspQryTrade: " << pTrade->InstrumentID << ":" << bIsLast);
+		LOGI(myAccount.account_id << ", CTP:OnRspQryTrade: " << pTrade->InstrumentID << ":" << bIsLast);
 		TradeInfo * trade = new TradeInfo;
 		memset(trade, 0, sizeof(TradeInfo));
 		strncpy(trade->Code, pTrade->InstrumentID, sizeof(trade->Code) - 1);
@@ -525,7 +525,7 @@ void SpiderCtpTdSpi::OnRspQryInvestorPosition(CThostFtdcInvestorPositionField *p
 	}
 	if (pInvestorPosition != NULL)
 	{
-		LOGD(myAccount.account_id << ", CTP:OnRspQryInvestorPosition: " << pInvestorPosition->InstrumentID << ":" << bIsLast << ":" << pInvestorPosition->PosiDirection << ":" << pInvestorPosition->Position);
+		LOGI(myAccount.account_id << ", CTP:OnRspQryInvestorPosition: " << pInvestorPosition->InstrumentID << ":" << bIsLast << ":" << pInvestorPosition->PosiDirection << ":" << pInvestorPosition->Position);
 		InvestorPosition * pos = new InvestorPosition;
 		memset(pos, 0, sizeof(InvestorPosition));
 		strncpy(pos->AccountID, pInvestorPosition->InvestorID, sizeof(pos->AccountID) - 1);
@@ -563,7 +563,7 @@ void SpiderCtpTdSpi::OnRspQryTradingAccount(CThostFtdcTradingAccountField *pTrad
 	}
 	if (pTradingAccount != NULL)
 	{
-		LOGD(myAccount.account_id << ", CTP:OnRspQryTradingAccount: " << pTradingAccount->Available << ":" << bIsLast);
+		LOGI(myAccount.account_id << ", CTP:OnRspQryTradingAccount: " << pTradingAccount->Available << ":" << bIsLast);
 		TradingAccount * account = new TradingAccount();
 		memset(account, 0, sizeof(TradingAccount));
 		strncpy(account->AccountID, pTradingAccount->AccountID, sizeof(account->AccountID) - 1);
@@ -621,7 +621,6 @@ const char * SpiderCtpTdSession::insert_order(OrderInsert * order)
 {
 	CThostFtdcInputOrderField field;
 	memset(&field,0,sizeof(field));
-	//LOGD(get_exid((EnumExchangeIDType)order->ExchangeID));
 	strncpy(field.BrokerID, get_account().broker_id, sizeof(field.BrokerID) -1 );
 	strncpy(field.InvestorID, get_account().account_id, sizeof(field.InvestorID) - 1);
 	strncpy(field.UserID, get_account().account_id, sizeof(field.UserID) - 1);
@@ -708,7 +707,7 @@ void SpiderCtpTdSession::cancel_order(OrderCancel * order)
 	strncpy(action.InvestorID, get_account().account_id, sizeof(action.InvestorID) - 1);
 	strncpy(action.UserID, get_account().account_id, sizeof(action.UserID) - 1);
 	action.OrderActionRef = get_seq();
-	LOGD(get_account().account_id << ":CTP Withdraw: "<< action.ExchangeID <<", " << action.InstrumentID <<", "<< action.OrderSysID <<", "<< action.OrderRef);
+	LOGI(get_account().account_id << ":CTP Withdraw: "<< action.ExchangeID <<", " << action.InstrumentID <<", "<< action.OrderSysID <<", "<< action.OrderRef);
 	int r = tradeConnection->getUserApi()->ReqOrderAction(&action, get_seq());
 	if (r != 0)
 	{

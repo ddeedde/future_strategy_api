@@ -99,8 +99,8 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>LIB_SPIDER_API_EXPORT;_CRT_SECURE_NO_WARNINGS;_WIN32_WINNT=0x0501;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\third_libs\cffex\include;..\third_libs\rem\include;..\third_libs\ctp\include;C:\dev\boost_1_66_0;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;LIB_SPIDER_API_EXPORT;_CRT_SECURE_NO_WARNINGS;_WIN32_WINNT=0x0501;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\third_libs\xele\include;..\third_libs\cffex\include;..\third_libs\rem\include;..\third_libs\ctp\include;C:\dev\boost_1_66_0;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -152,6 +152,7 @@
     <ClInclude Include="TdApi.h" />
     <ClInclude Include="UdpFutureSelf.h" />
     <ClInclude Include="Utility.h" />
+    <ClInclude Include="XeleTdApi.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="cJSON.cpp" />
@@ -171,6 +172,7 @@
     <ClCompile Include="MultiIndexApi.cpp" />
     <ClCompile Include="UdpFutureSelf.cpp" />
     <ClCompile Include="Utility.cpp" />
+    <ClCompile Include="XeleTdApi.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

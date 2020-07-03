@@ -10,7 +10,8 @@ using namespace raptor;
 enum EnumAccountDetailType
 {
 	AccountTradeFutureCTP = 101,
-	AccountTradeFutureEES = 102,
+	AccountTradeFutureEES = 102, //盛立
+	AccountTradeFutureXele = 103, //艾科朗克
 	AccountMarketFutureCTP = 201,
 	AccountMarketFutureEES = 202,
 	AccountMarketFutureMulticastDZ = 203, //东证期货提供的中金Level2期货组播行情

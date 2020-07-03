@@ -78,6 +78,9 @@
     <ClInclude Include="UdpFutureSelf.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="XeleTdApi.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="log4z.cpp">
@@ -129,6 +132,9 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="UdpFutureSelf.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="XeleTdApi.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

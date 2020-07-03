@@ -9,6 +9,7 @@
 #include "MultiFutureDZ.h"
 #include "TcpFutureCFFEX.h"
 #include "UdpFutureSelf.h"
+#include "XeleTdApi.h"
 
 SpiderCommonApi::SpiderCommonApi()
 	: market_running(false)
@@ -74,6 +75,11 @@ bool SpiderCommonApi::init(const char * account_id, int account_type )
 			case EnumAccountDetailType::AccountTradeFutureEES:
 			{
 				trade_session.reset(new SpiderEesTdSession(this, _ci));
+				return trade_session->init();
+			}
+			case EnumAccountDetailType::AccountTradeFutureXele:
+			{
+				trade_session.reset(new SpiderXeleTdSession(this, _ci));
 				return trade_session->init();
 			}
 			default:
@@ -421,7 +427,7 @@ int SpiderCommonApi::getAllAccounts(AccountInfo ** &out_account_list)
 		++_ai;
 	}
 	out_account_list = account_list;
-	//LOGD(out_account_list<<", "<< account_size);
+
 	//这里不释放，使用的地方释放指针
 	return _ai;
 }

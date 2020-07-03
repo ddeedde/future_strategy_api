@@ -136,12 +136,12 @@ void SpiderMultiIndexDZSpi::handle_receive_from(const boost::system::error_code&
 
 		return;
 	}
-	//LOGD(bytes_recvd<<", "<< sizeof(Index_DZ::MarketDataField));
+
 	if (bytes_recvd == sizeof(Index_DZ::MarketDataField))
 	{
 		if (recv_count++ % 2000 == 0)
 		{
-			LOGD("SpiderMultiIndexDZSpi received: " << recv_count);
+			LOGI("SpiderMultiIndexDZSpi received: " << recv_count);
 		}
 		if (!strncmp(m_data,"I",8)) //MDStreamID为'E'股票 'O'期权 'W'权证 'B'债券 'I'指数 'F' 基金
 		{
@@ -178,9 +178,6 @@ void SpiderMultiIndexDZSpi::handle_receive_from(const boost::system::error_code&
 			}
 			LOGD("ees index:" << md->Code<<","<< md->LastPrice <<","<< md->Volume <<","<< get_not_microsec()<<":"<< _index.data.snapshot.LastUpdateTime<<","<< _index.data.snapshot.StaticInfo.PrevClosePx); //just for test
 		}
-		//else {
-		//	LOGD(std::string(m_data,8));
-		//}
 	}
 
 	async_receive();

@@ -137,12 +137,12 @@ void SpiderMultiFutureDZSpi::handle_receive_from(const boost::system::error_code
 
 		return;
 	}
-	//LOGD(bytes_recvd<<", "<< sizeof(Future_DZ::level2_future_zj));
+
 	if (bytes_recvd == sizeof(Future_DZ::level2_future_zj))
 	{
-		if (recv_count++ % 2000 == 0)
+		if (recv_count++ % 5000 == 0)
 		{
-			LOGD("SpiderMultiFutureDZSpi received: " << recv_count);
+			LOGI("SpiderMultiFutureDZSpi received: " << recv_count);
 		}
 
 		Future_DZ::level2_future_zj _index;

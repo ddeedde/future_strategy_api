@@ -258,7 +258,7 @@ void SpiderEesTdSpi::OnQueryUserAccount(EES_AccountInfo * pAccoutnInfo, bool bFi
 	if (pAccoutnInfo)
 	{
 		//例如 66621197 和 6662119701 这两个子账户，它们的m_Account都是66621197，但是他们的m_UserId分别是：206和209。
-		LOGD(myAccount.account_id << ", EES:查询用户账户，"<< pAccoutnInfo->m_Account << "," << pAccoutnInfo->m_InitialBp << "," << pAccoutnInfo->m_AvailableBp << "," << pAccoutnInfo->m_Margin << "," << pAccoutnInfo->m_CommissionFee << "," << bFinish);
+		LOGI(myAccount.account_id << ", EES:查询用户账户，"<< pAccoutnInfo->m_Account << "," << pAccoutnInfo->m_InitialBp << "," << pAccoutnInfo->m_AvailableBp << "," << pAccoutnInfo->m_Margin << "," << pAccoutnInfo->m_CommissionFee << "," << bFinish);
 		if (strlen(pAccoutnInfo->m_Account) > 0)
 		{
 			memset(myAccount.broker_account_id, 0, sizeof(myAccount.broker_account_id));
@@ -291,7 +291,7 @@ void SpiderEesTdSpi::OnQueryAccountPosition(const char* pAccount, EES_AccountPos
 {
 	if (pAccoutnPosition)
 	{
-		LOGD(myAccount.account_id << ", EES:查询持仓，" << pAccount << "," << pAccoutnPosition->m_Symbol << "," << pAccoutnPosition->m_PosiDirection << "," << pAccoutnPosition->m_TodayQty<<","<< pAccoutnPosition->m_OvnQty);
+		LOGI(myAccount.account_id << ", EES:查询持仓，" << pAccount << "," << pAccoutnPosition->m_Symbol << "," << pAccoutnPosition->m_PosiDirection << "," << pAccoutnPosition->m_TodayQty<<","<< pAccoutnPosition->m_OvnQty);
 		InvestorPosition * pos = new InvestorPosition;
 		memset(pos, 0, sizeof(InvestorPosition));
 		strncpy(pos->AccountID, pAccount, sizeof(pos->AccountID) - 1);
@@ -322,7 +322,7 @@ void SpiderEesTdSpi::OnQueryAccountBP(const char* pAccount, EES_AccountBP* pAcco
 {
 	if (pAccoutnPosition)
 	{
-		LOGD(myAccount.account_id << ", EES:查询资金，"<< pAccount<<","<< pAccoutnPosition->m_AvailableBp<<","<<pAccoutnPosition->m_InitialBp<<","<< pAccoutnPosition->m_Margin);
+		LOGI(myAccount.account_id << ", EES:查询资金，"<< pAccount<<","<< pAccoutnPosition->m_AvailableBp<<","<<pAccoutnPosition->m_InitialBp<<","<< pAccoutnPosition->m_Margin);
 		TradingAccount * account = new TradingAccount();
 		memset(account, 0, sizeof(TradingAccount));
 		strncpy(account->AccountID, pAccount, sizeof(account->AccountID) - 1);
@@ -1014,7 +1014,7 @@ void SpiderEesTdSession::cancel_order(OrderCancel * order)
 	memset(&action, 0, sizeof(action));
 	strncpy(action.m_Account, get_account().broker_account_id, sizeof(action.m_Account) - 1);
 	action.m_MarketOrderToken = atoll(order->OrderSysID);
-	LOGD(get_account().account_id << ":EES Withdraw: " << action.m_MarketOrderToken);
+	LOGI(get_account().account_id << ":EES Withdraw: " << action.m_MarketOrderToken);
 
 	int r = tradeConnection->getUserApi()->CancelOrder(&action);
 	if (r != 0)

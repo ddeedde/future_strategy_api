@@ -135,54 +135,57 @@ void SpiderMultiIndexSpi::handle_receive_from(const boost::system::error_code& e
 
 		return;
 	}
-	//LOGD(bytes_recvd<<', '<< sizeof(MarketDataIndex));
+
 	if (bytes_recvd == sizeof(MarketDataIndex))
 	{
 		if (recv_count++ % 2000 == 0)
 		{
-			LOGD("SpiderMultiIndexSpi received: "<<recv_count);
+			LOGI("SpiderMultiIndexSpi received: "<<recv_count);
 		}
-		MarketDataIndex _index;
-		memcpy(&_index, m_data,bytes_recvd);
-		QuotaData * md = new QuotaData();
-		md->ExchangeID = get_exid_from_index_mul(_index.ExID);
-		md->UpdateMillisec = 0;
-		memcpy(md->TradingDay, getTodayString(), sizeof(md->TradingDay) - 1);
-		memcpy(md->Code, _index.SecID, sizeof(md->Code) - 1);
-		//memcpy(md->UpdateTime, getNowString(), sizeof(md->UpdateTime) - 1);
-		int _hour = _index.Time / 10000000;
-		int _minite = _index.Time / 100000 - _hour * 100;
-		int _second = (_index.Time / 1000) % 100;
-		sprintf_s(md->UpdateTime, sizeof(md->UpdateTime) - 1,"%.2d:%.2d:%.2d", _hour,_minite,_second); //维持 09:30:00 这样的格式
 
+		//MarketDataIndex _index;
+		//memcpy(&_index, m_data,bytes_recvd);
+		MarketDataIndex * _index = (MarketDataIndex*)m_data;
+
+		int _hour = _index->Time / 10000000;
+		int _minite = _index->Time / 100000 - _hour * 100;
+		int _second = (_index->Time / 1000) % 100;
+		int _milisec = _index->Time % 1000;
+
+		QuotaData * md = new QuotaData();
+		md->ExchangeID = get_exid_from_index_mul(_index->ExID);
+		md->UpdateMillisec = _milisec;
+		memcpy(md->TradingDay, getTodayString(), sizeof(md->TradingDay) - 1);
+		memcpy(md->Code, _index->SecID, sizeof(md->Code) - 1);
+		sprintf_s(md->UpdateTime, sizeof(md->UpdateTime) - 1,"%.2d:%.2d:%.2d", _hour,_minite,_second); //维持 09:30:00 这样的格式
 		md->AskPrice1 = 0;
 		md->AskVolume1 = 0;
 		md->BidPrice1 = 0;
 		md->BidVolume1 = 0;
-		md->LastPrice = (double)_index.Match / 10000;
-		md->HighestPrice = (double)_index.High / 10000;
-		md->LowestPrice = (double)_index.Low / 10000;
-		md->LowerLimitPrice = (double)_index.LowLimited / 10000;
-		md->UpperLimitPrice = (double)_index.HighLimited / 10000;
-		md->OpenPrice = (double)_index.Open / 10000;
-		md->PreClosePrice = (double)_index.PreClose / 10000;
+		md->LastPrice = (double)_index->Match / 10000;
+		md->HighestPrice = (double)_index->High / 10000;
+		md->LowestPrice = (double)_index->Low / 10000;
+		md->LowerLimitPrice = (double)_index->LowLimited / 10000;
+		md->UpperLimitPrice = (double)_index->HighLimited / 10000;
+		md->OpenPrice = (double)_index->Open / 10000;
+		md->PreClosePrice = (double)_index->PreClose / 10000;
 		md->ClosePrice = 0;
 		md->PreSettlementPrice = 0;
 		md->SettlementPrice = 0;
 		md->PreOpenInterest = 0;
 		md->OpenInterest = 0;
-		md->Turnover = (double)_index.Turnover;
-		md->Volume = _index.Volume;
+		md->Turnover = (double)_index->Turnover;
+		md->Volume = _index->Volume;
 	
 		if (smd)
 		{
-			bool _need_send = (_index.Type == 400) || smd->ifTest();
+			bool _need_send = (_index->Type == 400) || smd->ifTest();
 			if (_need_send)
 			{
 				smd->on_receive_data(md);
 			}		
 		}
-		LOGD("my index:"<<md->Code << "," << md->LastPrice << "," << md->Volume << "," << md->UpdateTime << ":" << _index.Time ); //just for test
+		LOGD("my index:"<<md->Code << "," << md->LastPrice << "," << md->Volume << "," << md->UpdateTime << ":" << md->UpdateMillisec); //just for test
 	}
 
 	async_receive();

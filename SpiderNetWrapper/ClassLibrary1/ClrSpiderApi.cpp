@@ -5,6 +5,8 @@
 #include <msclr/marshal.h>
 #include "ClrSpiderApi.h"
 #include <queue>
+#include <string>
+#include <boost/unordered_map.hpp>
 #include <boost/thread/mutex.hpp>
 #include <boost/thread.hpp>
 #include <boost/thread/condition_variable.hpp>
@@ -67,6 +69,7 @@ namespace Spider {
 	{
 		ConcurrentQueue<QuotaTask> task_queue;
 		boost::thread* task_thread;
+		boost::unordered_map<std::string,QuotaData *> quote_filter_map;
 	public:
 		QuoteSingleThreadWrapper();
 		~QuoteSingleThreadWrapper();
@@ -91,11 +94,38 @@ namespace Spider {
 	{
 		while (true)
 		{
+			bool need_send = false;
 			QuotaTask task = this->task_queue.wait_and_pop();
 			if (task.dest != NULL && task.data != NULL)
 			{
-				gcroot<BaseQuotaApi^>* mdClr = (gcroot<BaseQuotaApi^>*)task.dest;
-				((BaseQuotaApi^)* mdClr)->RaiseOnDataArriveEvent(task.data);
+				std::string quote_key = task.data->Code;
+				quote_key.append("#");
+				quote_key.append(std::to_string(task.data->ExchangeID));
+				auto it = quote_filter_map.find(quote_key);
+				if (it == quote_filter_map.end())
+				{
+					QuotaData * _data = new QuotaData();
+					snprintf(_data->UpdateTime, sizeof(_data->UpdateTime), "%s.%d", task.data->UpdateTime, task.data->UpdateMillisec);
+					_data->Volume = task.data->Volume;
+					quote_filter_map[quote_key] = _data;
+					need_send = true;
+				}
+				else {
+					QuotaData * _data = it->second;
+					char _tmp_tm[16] = {0};
+					snprintf(_tmp_tm, sizeof(_tmp_tm), "%s.%d", task.data->UpdateTime, task.data->UpdateMillisec);
+					if (task.data->Volume > _data->Volume || strcmp(_tmp_tm, _data->UpdateTime) > 0)
+					{
+						memcpy(_data->UpdateTime, _tmp_tm, sizeof(_data->UpdateTime));
+						_data->Volume = task.data->Volume;
+						need_send = true;
+					}
+				}
+				if (need_send)
+				{
+					gcroot<BaseQuotaApi^>* mdClr = (gcroot<BaseQuotaApi^>*)task.dest;
+					((BaseQuotaApi^)* mdClr)->RaiseOnDataArriveEvent(task.data);
+				}
 			}
 			if (task.data != NULL) //在这里释放行情指针，C++ api中不再释放 
 			{

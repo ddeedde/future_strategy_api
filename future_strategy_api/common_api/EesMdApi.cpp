@@ -207,9 +207,9 @@ void SpiderEesMdSpi::OnQuoteUpdated(EesEqsIntrumentType chInstrumentType, EESMar
 {
 	if (pDepthQuoteData != NULL)
 	{
-		if (recv_count++ % 1000 == 0)
+		if (recv_count++ % 5000 == 0)
 		{
-			LOGD("SpiderEESMdSpi received: " << recv_count<<", ex:"<< pDepthQuoteData->ExchangeID);
+			LOGI("SpiderEESMdSpi received: " << recv_count<<", ex:"<< pDepthQuoteData->ExchangeID);
 		}
 		QuotaData * md = new QuotaData();
 		md->ExchangeID = get_exid_from_ctp(pDepthQuoteData->ExchangeID);

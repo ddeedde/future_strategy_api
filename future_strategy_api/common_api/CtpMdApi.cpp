@@ -107,7 +107,7 @@ void SpiderCtpMdSpi::OnRspUserLogin(CThostFtdcRspUserLoginField *pRspUserLogin, 
 		LOGI(myAccount.account_id << ", CTP:登陆成功，frontid从"<< myAccount.front_id<<"变更为"<<pRspUserLogin->FrontID<<"，sessionid从"<<myAccount.session_id<<"变更为"<<pRspUserLogin->SessionID);
 		sprintf(myAccount.front_id,"%d", pRspUserLogin->FrontID);
 		sprintf(myAccount.session_id, "%d", pRspUserLogin->SessionID);
-		LOGD("交易所时间打印："<<pRspUserLogin->SHFETime << ", " << pRspUserLogin->DCETime << ", " << pRspUserLogin->CZCETime << ", " << pRspUserLogin->FFEXTime << ", " << pRspUserLogin->INETime);
+		LOGI("交易所时间打印："<<pRspUserLogin->SHFETime << ", " << pRspUserLogin->DCETime << ", " << pRspUserLogin->CZCETime << ", " << pRspUserLogin->FFEXTime << ", " << pRspUserLogin->INETime);
 		if (smd)
 		{
 			smd->on_log_in();
@@ -202,9 +202,9 @@ void SpiderCtpMdSpi::OnRtnDepthMarketData(CThostFtdcDepthMarketDataField *pDepth
 {
 	if (pDepthMarketData != NULL)
 	{
-		if (++recv_count % 1000 == 0)
+		if (++recv_count % 5000 == 0)
 		{
-			LOGD("SpiderCtpMdSpi received: " << recv_count);
+			LOGI("SpiderCtpMdSpi received: " << recv_count);
 		}
 		QuotaData * md = new QuotaData();
 		md->ExchangeID = get_exid_from_ctp(pDepthMarketData->ExchangeID);
